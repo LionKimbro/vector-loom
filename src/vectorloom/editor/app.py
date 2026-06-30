@@ -90,6 +90,9 @@ def _route_world_mutate(effect, state, doc):
     if op == E.OP_REPLACE:
         world.replace_node(doc, effect["path"], effect["node"])
         return state
+    if op == E.OP_CONNECT:
+        world.add_connection(doc, effect["connect"]["from"], effect["connect"]["to"])
+        return state
     return state
 
 

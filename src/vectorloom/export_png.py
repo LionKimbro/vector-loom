@@ -29,7 +29,16 @@ def render_image(doc, size=(900, 560), margin=0.85, background="#fafafa"):
     draw = ImageDraw.Draw(img)
     base = _fit_transform(doc, width, height, margin)
     _draw_node(draw, doc["root"], base, doc["defs"])
+    _draw_connections(draw, doc, base)
     return img
+
+
+def _draw_connections(draw, doc, base):
+    """Draw connection wires, reusing the renderer's shared resolution so the
+    PNG matches what the on-screen runtime draws."""
+    connectors = render.resolve_connectors(doc, base)
+    for a, b, style in render.connection_segments(doc, connectors):
+        draw.line([a, b], fill=(style["stroke"] or "#1565c0"), width=int(render._stroke_px(style, base)))
 
 
 def export_file(in_path, out_path, size=(900, 560)):

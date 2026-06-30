@@ -108,15 +108,18 @@ add/delete rect/oval/line/polyline/port/group, edit node JSON, save, reload, and
 undo/redo — all on full CIRA. The pure runtime (format, renderer, PNG export,
 viewer) is dependency-free except Pillow.
 
-Dragging moves the real shape live under the cursor, and **connector snapping**
-works: dragging a node with ports near a compatible connector (output↔input,
-bidirectional↔any, anchor↔anchor) snaps it exactly onto the target, with a live
-ring overlay marking the connection. Snap is a tokenizer (spatial candidate
-computation) consulted by the move organism — the first piece of the Diagram
-Workbench.
+Dragging moves the real shape live under the cursor, and **connector snapping +
+connections** work: dragging a node with ports near a compatible connector
+(output↔input, bidirectional↔any, anchor↔anchor) snaps it exactly onto the
+target — with a live ring overlay — and records a durable **connection** in the
+document. Connections are a first-class part of the format (a top-level
+`connections` list of `{from, to}` connector references); the runtime renders
+them as wires that resolve at render time, so they follow their endpoints when
+nodes move. The snap-move and the connection commit as one undo step. Snap is a
+tokenizer (spatial candidate computation) consulted by the move organism — the
+core of the Diagram Workbench.
 
-Next: a CONNECT semantic action that records an actual edge/wire when a snap
-commits, a Glyph Workbench (strokes/baselines/advance width), and a SoftSpec
-formalization of the format. Text is experimental — tkinter Canvas text does not
-scale/rotate consistently; a stroke-font built from these same primitives may
-replace it.
+Next: selecting/deleting/restyling connections, multi-select, a Glyph Workbench
+(strokes/baselines/advance width), and a SoftSpec formalization of the format.
+Text is experimental — tkinter Canvas text does not scale/rotate consistently; a
+stroke-font built from these same primitives may replace it.

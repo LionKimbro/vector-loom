@@ -75,6 +75,40 @@ def test_add_delete_replace_roundtrip(tmp_path):
     assert len(doc["root"]["children"]) == n0
 
 
+def _two_node_doc(with_connection):
+    raw = {
+        "vectorloom": "1",
+        "defs": {"box": {"type": "group", "id": "box", "children": [
+            {"type": "rect", "id": "r", "x": 0, "y": 0, "w": 40, "h": 20},
+            {"type": "port", "id": "out", "x": 40, "y": 10, "role": "output"},
+            {"type": "port", "id": "in", "x": 0, "y": 10, "role": "input"},
+        ]}},
+        "root": {"type": "group", "id": "root", "children": [
+            {"type": "instance", "id": "a", "def": "box", "x": 0, "y": 0},
+            {"type": "instance", "id": "b", "def": "box", "x": 200, "y": 0},
+        ]},
+    }
+    if with_connection:
+        raw["connections"] = [{"from": {"node": "root.a", "name": "out"}, "to": {"node": "root.b", "name": "in"}}]
+    return model.normalize_document(raw)
+
+
+def test_connection_normalizes_idempotently_and_resolves():
+    from vectorloom import render
+    doc = _two_node_doc(with_connection=True)
+    assert len(doc["connections"]) == 1 and doc["connections"][0]["id"]
+    assert model.normalize_document(doc) == doc  # idempotent round-trip
+    segments = render.connection_segments(doc, render.resolve_connectors(doc))
+    assert len(segments) == 1  # both endpoints resolved to a drawable wire
+
+
+def test_add_connection_dedupes_unordered():
+    doc = _two_node_doc(with_connection=True)
+    # An equivalent edge (reversed) must not be added again.
+    assert world.add_connection(doc, {"node": "root.b", "name": "in"}, {"node": "root.a", "name": "out"}) is None
+    assert len(doc["connections"]) == 1
+
+
 def test_history_undo_redo():
     doc = _doc()
     path = "history-doc"
@@ -144,15 +178,29 @@ def test_cira_loop_select_and_drag(tmp_path):
 
 
 def test_connector_snap_aligns_on_commit(tmp_path):
+    import json
     import math
+    import shutil
     village = pytest.importorskip("tkvillage")
     from vectorloom import geometry as geo, render
     from vectorloom.editor import app, continuity
-    import shutil
 
-    src = os.path.join(EXAMPLES, "folder_node.vloom.json")
+    # A clean two-node scene with no pre-existing connections, so the snap's
+    # recorded connection is unambiguous.
     doc_path = str(tmp_path / "snap.vloom.json")
-    shutil.copy(src, doc_path)
+    with open(doc_path, "w", encoding="utf-8") as fp:
+        json.dump({
+            "vectorloom": "1",
+            "defs": {"box": {"type": "group", "id": "box", "children": [
+                {"type": "rect", "id": "r", "x": 0, "y": 0, "w": 90, "h": 56},
+                {"type": "port", "id": "out", "x": 90, "y": 28, "role": "output"},
+                {"type": "port", "id": "in", "x": 0, "y": 28, "role": "input"},
+            ]}},
+            "root": {"type": "group", "id": "root", "children": [
+                {"type": "instance", "id": "launch", "def": "box", "x": 40, "y": 60},
+                {"type": "instance", "id": "stage", "def": "box", "x": 320, "y": 60},
+            ]},
+        }, fp)
 
     def conn(rec, role, sub):
         return [c for c in rec["projection"]["connectors"]
@@ -194,6 +242,12 @@ def test_connector_snap_aligns_on_commit(tmp_path):
         inp2 = conn(rec, "input", "root.stage")
         gap = math.hypot(out2["world"][0] - inp2["world"][0], out2["world"][1] - inp2["world"][1])
         assert gap < 1.5  # connectors aligned by the snap
+
+        # The snap also recorded a durable connection as part of the same move.
+        conns = world.get(doc_path)["connections"]
+        assert len(conns) == 1
+        assert conns[0]["from"]["node"] == "root.launch"
+        assert conns[0]["to"]["node"] == "root.stage"
     finally:
         village.shutdown()
         if os.path.isdir(".vl-snap"):

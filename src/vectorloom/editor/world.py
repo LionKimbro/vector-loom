@@ -141,6 +141,21 @@ def delete_node(doc, path):
     return True
 
 
+def add_connection(doc, from_ref, to_ref):
+    """Record an edge between two connectors, deduping unordered duplicates.
+
+    Returns the connection id, or None if the edge already exists.
+    """
+    pair = {(from_ref["node"], from_ref["name"]), (to_ref["node"], to_ref["name"])}
+    for c in doc["connections"]:
+        existing = {(c["from"]["node"], c["from"]["name"]), (c["to"]["node"], c["to"]["name"])}
+        if existing == pair:
+            return None
+    conn = model.normalize_connection({"from": from_ref, "to": to_ref}, doc["styles"])
+    doc["connections"].append(conn)
+    return conn["id"]
+
+
 def replace_node(doc, path, raw_node):
     """Replace the node at path with a normalized version of raw_node, keeping
     its id stable so the selection path stays valid."""

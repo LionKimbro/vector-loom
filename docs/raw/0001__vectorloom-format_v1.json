@@ -33,8 +33,20 @@
       "meta": "Optional free-form object of metadata (title, notes, authorship). Not interpreted by the runtime.",
       "styles": "Optional object mapping style-name -> style object. Referenced by nodes via a string `style`.",
       "defs": "Optional object mapping def-name -> node. Reusable structures placed elsewhere by `instance` nodes.",
-      "root": "Required node. The top of the visible tree. If a bare primitive is given, the runtime wraps it in a group."
+      "root": "Required node. The top of the visible tree. If a bare primitive is given, the runtime wraps it in a group.",
+      "connections": "Optional list of connections (edges) joining two connectors. Rendered as wires that follow their endpoints."
     }
+  },
+
+  "connection-object": {
+    "description": "A durable relation joining two connectors. Endpoints are referenced by node path + connector name and resolved to world positions at render time, so a connection survives edits and follows its nodes. An endpoint that does not resolve simply does not draw.",
+    "fields": {
+      "id": "Optional stable identifier. Fabricated if absent.",
+      "from": "Endpoint object {node, name}: the editable node path and the connector/port name on it.",
+      "to": "Endpoint object {node, name}: the other end.",
+      "style": "Optional style name or inline style object. Defaults to a blue wire."
+    },
+    "editor-behavior": "Dragging a port-bearing node so a connector lands within snap range of a compatible connector (output<->input, bidirectional<->any, anchor<->anchor) snaps it into alignment and records a connection. The snap-move and the connection commit as a single undoable action."
   },
 
   "style-object": {

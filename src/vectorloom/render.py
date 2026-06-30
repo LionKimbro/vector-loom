@@ -35,7 +35,72 @@ def render_document(canvas, doc, base_transform=geo.IDENTITY):
     """
     ctx = {"defs": doc["defs"], "items": [], "by_item": {}, "connectors": []}
     _draw_node(canvas, doc["root"], base_transform, doc["root"]["id"], ctx)
+    _draw_connections(canvas, doc, ctx, base_transform)
     return {"items": ctx["items"], "by_item": ctx["by_item"], "connectors": ctx["connectors"]}
+
+
+def _draw_connections(canvas, doc, ctx, base_transform):
+    """Draw wires between connected connectors. Connection items are not
+    registered in by_item, so they are decorative relations: not hit-tested,
+    not draggable. Endpoints that do not resolve are skipped."""
+    for a, b, style in connection_segments(doc, ctx["connectors"]):
+        item = canvas.create_line(
+            a[0], a[1], b[0], b[1],
+            fill=(style["stroke"] or "#1565c0"),
+            width=_stroke_px(style, base_transform),
+            dash=_dash(style, base_transform),
+        )
+        ctx["items"].append(item)
+
+
+def connection_segments(doc, connectors):
+    """Resolve each connection to (point_a, point_b, style) using the supplied
+    connector world positions. Shared by the Canvas renderer and PNG exporter so
+    both draw connections identically. Endpoints that do not resolve are dropped.
+    """
+    lookup = {}
+    for c in connectors:
+        lookup[(_connector_key(c["path"]), c["name"])] = c["world"]
+    segments = []
+    for conn in doc.get("connections", []):
+        a = lookup.get((conn["from"]["node"], conn["from"]["name"]))
+        b = lookup.get((conn["to"]["node"], conn["to"]["name"]))
+        if a is not None and b is not None:
+            segments.append((a, b, conn["style"]))
+    return segments
+
+
+def resolve_connectors(doc, base_transform=geo.IDENTITY):
+    """Walk the tree and return resolved connector world positions without
+    drawing. Lets non-Canvas consumers (the PNG exporter, hit-testing helpers)
+    reuse the renderer's connector math."""
+    ctx = {"connectors": []}
+    _walk_connectors(doc["root"], base_transform, doc["root"]["id"], doc["defs"], ctx)
+    return ctx["connectors"]
+
+
+def _walk_connectors(node, world_m, path, defs, ctx):
+    kind = node["type"]
+    if kind == S.GROUP:
+        m = geo.compose(world_m, geo.from_trs(**_trs(node)))
+        for child in node["children"]:
+            _walk_connectors(child, m, f"{path}.{child['id']}", defs, ctx)
+        _collect_connectors(node, m, path, ctx)
+    elif kind == S.INSTANCE:
+        m = geo.compose(world_m, geo.from_trs(**_trs(node)))
+        _walk_connectors(defs[node["def"]], m, f"{path}={node['def']}", defs, ctx)
+        _collect_connectors(node, m, path, ctx)
+    elif kind == S.PORT:
+        wx, wy = geo.apply_point(world_m, node["x"], node["y"])
+        ctx["connectors"].append({
+            "path": path, "name": node["name"], "world": (wx, wy),
+            "direction": node["direction"], "role": node["role"],
+        })
+
+
+def _connector_key(render_path):
+    """Collapse a connector's render path to its editable node path."""
+    return render_path.split("=")[0].split(":")[0]
 
 
 # --------------------------------------------------------------------------

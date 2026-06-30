@@ -37,6 +37,7 @@ def load_file(path):
 
 
 DEFAULT_STYLE = {"stroke": "#222222", "fill": None, "width": 1.0, "dash": None}
+DEFAULT_WIRE_STYLE = {"stroke": "#1565c0", "fill": None, "width": 2.0, "dash": None}
 
 # Per-process counter used only to fabricate ids for nodes that lack one.
 _id_counter = {"n": 0}
@@ -80,6 +81,8 @@ def normalize_document(raw):
             "children": [root],
         }
 
+    connections = [_normalize_connection(c, styles) for c in raw.get("connections", [])]
+
     doc = {
         "format": S.FORMAT_KEY,
         "version": str(raw.get("version", S.FORMAT_VERSION)),
@@ -87,6 +90,7 @@ def normalize_document(raw):
         "styles": styles,
         "defs": defs,
         "root": root,
+        "connections": connections,
     }
     validate_document(doc)
     return doc
@@ -96,6 +100,33 @@ def normalize_node(raw, styles=None):
     """Normalize a single raw node into canonical form (public castle gate for
     the editor, which fabricates new nodes as loose shorthand)."""
     return _normalize_node(raw, styles or {})
+
+
+def normalize_connection(raw, styles=None):
+    """Normalize a single raw connection (public castle gate for the editor)."""
+    return _normalize_connection(raw, styles or {})
+
+
+def _normalize_connection(raw, styles):
+    """A connection joins two connectors, each referenced by node path + name.
+
+    Endpoints are resolved to world positions at render time; an unresolvable
+    endpoint simply does not draw, so connections survive edits to the tree.
+    """
+    if "from" not in raw or "to" not in raw:
+        raise VloomError("connection requires 'from' and 'to' endpoints")
+    return {
+        "id": raw.get("id") or _next_id("conn"),
+        "from": _normalize_endpoint(raw["from"]),
+        "to": _normalize_endpoint(raw["to"]),
+        "style": _merge_style(DEFAULT_WIRE_STYLE, raw["style"]) if isinstance(raw.get("style"), dict)
+        else dict(styles[raw["style"]]) if isinstance(raw.get("style"), str) and raw["style"] in styles
+        else dict(DEFAULT_WIRE_STYLE),
+    }
+
+
+def _normalize_endpoint(raw):
+    return {"node": str(raw["node"]), "name": str(raw["name"])}
 
 
 def validate_document(doc):

@@ -46,12 +46,19 @@ def reduce(state, event, doc):
     if kind == E.NODE_MOVED:
         new = dict(state)
         new["selection"] = event["path"]
-        new["status"] = f"Moved {event['path']}"
-        new["status_kind"] = "ok"
-        return new, [
-            {"type": E.WORLD_MUTATE, "op": E.OP_MOVE, "path": event["path"], "dx": event["dx"], "dy": event["dy"]},
-            {"type": E.CHECKPOINT},
-        ]
+        effects = [{"type": E.WORLD_MUTATE, "op": E.OP_MOVE, "path": event["path"],
+                    "dx": event["dx"], "dy": event["dy"]}]
+        # A snapped move also records the connection it formed, so move + connect
+        # are one checkpoint (a single drag is one undoable action).
+        if event.get("connect"):
+            effects.append({"type": E.WORLD_MUTATE, "op": E.OP_CONNECT, "connect": event["connect"]})
+            new["status"] = f"Connected {event['connect']['from']['name']} -> {event['connect']['to']['name']}"
+            new["status_kind"] = "phase"
+        else:
+            new["status"] = f"Moved {event['path']}"
+            new["status_kind"] = "ok"
+        effects.append({"type": E.CHECKPOINT})
+        return new, effects
 
     if kind == E.NODE_ADDED:
         parent = state["selection"] if _selection_is_group(state, doc) else doc["root"]["id"]

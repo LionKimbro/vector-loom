@@ -228,7 +228,15 @@ def _drag(o, d, judge, out, gesture, record, disc):
         gesture["consumed"] = True
         if d["released"]:
             scale = disc["scale"] or 1.0
-            out.append({"type": E.NODE_MOVED, "path": o["path"], "dx": sdx / scale, "dy": sdy / scale})
+            moved = {"type": E.NODE_MOVED, "path": o["path"], "dx": sdx / scale, "dy": sdy / scale}
+            if snap is not None:
+                # Record the edge formed by this snap, keyed by node path + name
+                # so it survives later edits and resolves at render time.
+                moved["connect"] = {
+                    "from": {"node": world.editable_path(snap["source"]["path"]), "name": snap["source"]["name"]},
+                    "to": {"node": world.editable_path(snap["target"]["path"]), "name": snap["target"]["name"]},
+                }
+            out.append(moved)
             _release(judge, "pointer", "drag")
             o["state"] = "IDLE"
     elif d["released"]:

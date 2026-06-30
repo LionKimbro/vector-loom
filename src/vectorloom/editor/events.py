@@ -35,6 +35,7 @@ OP_MOVE = "move"
 OP_ADD = "add"
 OP_DELETE = "delete"
 OP_REPLACE = "replace"
+OP_CONNECT = "connect"
 
 # --- immediates (Continuity -> Projection, single frame, volatile) ---
 DRAG_PREVIEW = "DRAG_PREVIEW"
