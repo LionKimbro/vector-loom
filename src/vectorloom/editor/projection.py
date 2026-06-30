@@ -18,6 +18,7 @@ from .. import symbols as S
 from . import continuity
 from . import discrete
 from . import events as E
+from . import handles as handles_mod
 from . import world
 
 _STATUS_COLORS = {"ok": "#2e7d32", "error": "#c62828", "info": "#222222", "phase": "#1565c0"}
@@ -75,12 +76,14 @@ def project(_rt, record):
 
     base = geo.compose(geo.translate(state["ox"], state["oy"]), geo.scale(state["scale"], state["scale"]))
 
-    # During a live drag, the dragged node carries a temporary transform intercept
-    # at its path. The renderer resolves the node, its subtree, its connectors,
-    # and any connection wires through that one extra transform, producing a
-    # coherent preview without mutating the model.
-    drag = next((i for i in record.get("immediates", []) if i["type"] == E.DRAG_PREVIEW), None)
-    overlay = {drag["path"]: geo.translate(drag["sdx"], drag["sdy"])} if drag else None
+    # Continuous manipulation (move / resize / rotate) carries a temporary
+    # transform intercept at the manipulated node's path. The renderer resolves
+    # the node, its subtree, connectors, and wires through that one transform —
+    # a coherent preview, model untouched. Move sends a translate; resize/rotate
+    # send the full transform.
+    immediates = record.get("immediates", [])
+    preview = next((i for i in immediates if i["type"] in (E.DRAG_PREVIEW, E.TRANSFORM_PREVIEW)), None)
+    overlay = _overlay_from_preview(preview)
 
     canvas.delete("all")
     result = render.render_document(canvas, doc, base, overlay=overlay)
@@ -88,38 +91,56 @@ def project(_rt, record):
     record["projection"]["connectors"] = result["connectors"]
     record["projection"]["connections"] = result["connections"]
 
-    _draw_overlays(canvas, doc, state, base, overlay, drag, record.get("immediates", []))
+    # Selection bounds and handles resolve through the same overlay, so they track
+    # the previewed shape during a manipulation.
+    sel = state["selection"]
+    sel_bb = render.path_world_bounds(doc, sel, base, overlay=overlay) if sel else None
+    record["projection"]["handles"] = handles_mod.layout(sel_bb, state["handle_mode"]) if sel else []
+
+    _draw_overlays(canvas, doc, state, base, sel_bb, record["projection"]["handles"], preview, immediates)
     _update_inspector(record, doc, state)
     _update_status(record, state)
 
 
+def _overlay_from_preview(preview):
+    if preview is None:
+        return None
+    if preview["type"] == E.DRAG_PREVIEW:
+        return {preview["path"]: geo.translate(preview["sdx"], preview["sdy"])}
+    return {preview["path"]: preview["transform"]}
+
+
 # --------------------------------------------------------------------------
-# selection / hover / snap overlays (the model-untouched decorations)
+# selection / handles / hover / snap overlays (the model-untouched decorations)
 # --------------------------------------------------------------------------
 
-def _draw_overlays(canvas, doc, state, base, overlay, drag, immediates):
-    if drag is not None:
-        # Bounds resolve through the same overlay, so the selection rectangle
-        # tracks the dragged node's previewed position.
-        bb = render.path_world_bounds(doc, drag["path"], base, overlay=overlay)
-        if bb:
-            canvas.create_rectangle(*_pad(bb, 3), outline="#1565c0", width=2, dash=(4, 2))
+def _draw_overlays(canvas, doc, state, base, sel_bb, handle_list, preview, immediates):
+    if preview is None:
+        for imm in immediates:
+            if imm["type"] == E.HOVER and imm["path"] != state["selection"]:
+                bb = render.path_world_bounds(doc, imm["path"], base)
+                if bb:
+                    canvas.create_rectangle(*_pad(bb, 2), outline="#90a4ae", width=1)
+
+    if sel_bb is not None:
+        canvas.create_rectangle(*_pad(sel_bb, 3), outline="#1565c0", width=2, dash=(4, 2))
+    _draw_handles(canvas, handle_list)
+
+    if preview is not None:
         snap = next((i for i in immediates if i["type"] == E.SNAP), None)
         if snap is not None:
             tx, ty = snap["target_world"]
             canvas.create_oval(tx - 9, ty - 9, tx + 9, ty + 9, outline="#ff6f00", width=3)
-        return  # suppress hover/static selection while dragging
 
-    for imm in immediates:
-        if imm["type"] == E.HOVER and imm["path"] != state["selection"]:
-            bb = render.path_world_bounds(doc, imm["path"], base)
-            if bb:
-                canvas.create_rectangle(*_pad(bb, 2), outline="#90a4ae", width=1)
 
-    if state["selection"]:
-        bb = render.path_world_bounds(doc, state["selection"], base)
-        if bb:
-            canvas.create_rectangle(*_pad(bb, 3), outline="#1565c0", width=2, dash=(4, 2))
+def _draw_handles(canvas, handle_list):
+    r = handles_mod.HANDLE_RADIUS
+    for h in handle_list:
+        x, y = h["x"], h["y"]
+        if h["kind"] == E.HANDLE_RESIZE:
+            canvas.create_rectangle(x - r, y - r, x + r, y + r, fill="#ffffff", outline="#1565c0", width=2)
+        else:  # rotate
+            canvas.create_oval(x - r, y - r, x + r, y + r, fill="#fff3e0", outline="#ff6f00", width=2)
 
 
 def _pad(bb, n):

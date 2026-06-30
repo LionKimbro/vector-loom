@@ -22,6 +22,7 @@ from .. import geometry as geo
 from .. import render
 from .. import symbols as S
 from . import events as E
+from . import handles as handles_mod
 from . import world
 
 
@@ -41,10 +42,12 @@ def init_continuity(record):
     """Install RAW state, tokenizer bookkeeping, Judge, and organisms."""
     blank = {"x": 0, "y": 0, "button1_down": False, "inside": False}
     record["raw"] = {"current": dict(blank), "previous": dict(blank)}
-    record["continuity"] = {"press_x": None, "press_y": None, "press_target": None}
+    record["continuity"] = {"press_x": None, "press_y": None, "press_target": None, "press_handle": None}
     record["judge"] = {}                       # resource -> owning organism name
-    record["gesture"] = {"consumed": False}    # was this gesture handled by pan/drag?
+    record["gesture"] = {"consumed": False}    # was this gesture handled by a manipulation?
     record["organisms"] = {
+        "resize": {"state": "IDLE", "handle": None},
+        "rotate": {"state": "IDLE", "handle": None},
         "pan": {"state": "IDLE"},
         "drag": {"state": "IDLE", "path": None},
         "select": {"state": "IDLE"},
@@ -86,9 +89,13 @@ def tokenize(record):
     pressed = cur["button1_down"] and not prev["button1_down"]
     released = (not cur["button1_down"]) and prev["button1_down"]
     target = _hit_test(canvas, by_item, cur["x"], cur["y"])
+    # Hit-test resize/rotate handles (present only in those modes). Handles take
+    # priority over the body, so a press on one arms resize/rotate, not move.
+    handle_target = handles_mod.hit(record["projection"].get("handles", []), cur["x"], cur["y"])
 
     if pressed:
-        book["press_x"], book["press_y"], book["press_target"] = cur["x"], cur["y"], target
+        book["press_x"], book["press_y"] = cur["x"], cur["y"]
+        book["press_target"], book["press_handle"] = target, handle_target
 
     moved = book["press_x"] is not None and \
         math.hypot(cur["x"] - book["press_x"], cur["y"] - book["press_y"]) > DRAG_THRESHOLD
@@ -112,7 +119,9 @@ def tokenize(record):
         "released": released,
         "button_down": cur["button1_down"],
         "target": target,
+        "handle_target": handle_target,
         "press_target": book["press_target"],
+        "press_handle": book["press_handle"],
         "press_x": book["press_x"],
         "press_y": book["press_y"],
         "sx": cur["x"],
@@ -176,6 +185,11 @@ def run_organisms(record, derived, out_events):
     if derived["pressed"]:
         gesture["consumed"] = False
 
+    # Resize/rotate claim the pointer first when a handle was pressed; move only
+    # arms on the body (not a handle); pan on empty space. The Judge guarantees a
+    # single owner, and `consumed` keeps the click-select from also firing.
+    _resize(record["organisms"]["resize"], derived, judge, out_events, gesture, record, disc)
+    _rotate(record["organisms"]["rotate"], derived, judge, out_events, gesture, record, disc)
     _pan(record["organisms"]["pan"], derived, judge, out_events, gesture)
     _drag(record["organisms"]["drag"], derived, judge, out_events, gesture, record, disc)
     _select(record["organisms"]["select"], derived, out_events, gesture)
@@ -193,6 +207,72 @@ def promote_raw(record):
 # --------------------------------------------------------------------------
 # organisms
 # --------------------------------------------------------------------------
+
+def _resize(o, d, judge, out, gesture, record, disc):
+    if d["pressed"]:
+        ph = d["press_handle"]
+        armed = ph is not None and ph["kind"] == E.HANDLE_RESIZE
+        o["state"] = "ARMED" if armed else "IDLE"
+        o["handle"] = ph
+    if o["state"] == "ARMED" and d["threshold_crossed"] and _commit(judge, "pointer", "resize"):
+        o["state"] = "ACTIVE"
+    if o["state"] == "ACTIVE":
+        transform = _resize_transform(o["handle"], d)
+        record["immediates"].append({"type": E.TRANSFORM_PREVIEW, "path": disc["selection"], "transform": transform})
+        gesture["consumed"] = True
+        if d["released"]:
+            out.append({"type": E.NODE_TRANSFORMED, "path": disc["selection"], "transform": transform})
+            _release(judge, "pointer", "resize")
+            o["state"] = "IDLE"
+    elif d["released"]:
+        o["state"] = "IDLE"
+
+
+def _resize_transform(handle, d):
+    """Screen-space scale-about-anchor as the dragged corner/edge follows the
+    cursor. The opposite corner/edge (the handle's anchor) stays fixed."""
+    ax, ay = handle["ax"], handle["ay"]
+    sdx = d["sx"] - d["press_x"]
+    sdy = d["sy"] - d["press_y"]
+    fx = fy = 1.0
+    if handle["sx_on"] and (handle["x"] - ax) != 0:
+        fx = (handle["x"] + sdx - ax) / (handle["x"] - ax)
+    if handle["sy_on"] and (handle["y"] - ay) != 0:
+        fy = (handle["y"] + sdy - ay) / (handle["y"] - ay)
+    return geo.compose(geo.translate(ax, ay), geo.compose(geo.scale(fx, fy), geo.translate(-ax, -ay)))
+
+
+def _rotate(o, d, judge, out, gesture, record, disc):
+    if d["pressed"]:
+        ph = d["press_handle"]
+        armed = ph is not None and ph["kind"] == E.HANDLE_ROTATE
+        o["state"] = "ARMED" if armed else "IDLE"
+        o["handle"] = ph
+        if armed:
+            o["cx"], o["cy"] = ph["cx"], ph["cy"]
+            o["a0"] = math.atan2(d["press_y"] - ph["cy"], d["press_x"] - ph["cx"])
+    if o["state"] == "ARMED" and d["threshold_crossed"] and _commit(judge, "pointer", "rotate"):
+        o["state"] = "ACTIVE"
+    if o["state"] == "ACTIVE":
+        transform = _rotate_transform(o, d)
+        record["immediates"].append({"type": E.TRANSFORM_PREVIEW, "path": disc["selection"], "transform": transform})
+        gesture["consumed"] = True
+        if d["released"]:
+            out.append({"type": E.NODE_TRANSFORMED, "path": disc["selection"], "transform": transform})
+            _release(judge, "pointer", "rotate")
+            o["state"] = "IDLE"
+    elif d["released"]:
+        o["state"] = "IDLE"
+
+
+def _rotate_transform(o, d):
+    """Screen-space rotation about the selection center by the angle the cursor
+    has swept since the press."""
+    a1 = math.atan2(d["sy"] - o["cy"], d["sx"] - o["cx"])
+    degrees = math.degrees(a1 - o["a0"])
+    cx, cy = o["cx"], o["cy"]
+    return geo.compose(geo.translate(cx, cy), geo.compose(geo.rotate(degrees), geo.translate(-cx, -cy)))
+
 
 def _pan(o, d, judge, out, gesture):
     if d["pressed"]:
@@ -213,7 +293,8 @@ def _pan(o, d, judge, out, gesture):
 
 def _drag(o, d, judge, out, gesture, record, disc):
     if d["pressed"]:
-        o["state"] = "ARMED" if d["press_target"] else "IDLE"
+        # Move arms on the body only; a press on a handle is for resize/rotate.
+        o["state"] = "ARMED" if (d["press_target"] and not d["press_handle"]) else "IDLE"
         o["path"] = d["press_target"]
     if o["state"] == "ARMED" and d["threshold_crossed"] and _commit(judge, "pointer", "drag"):
         o["state"] = "ACTIVE"

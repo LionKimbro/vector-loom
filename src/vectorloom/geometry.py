@@ -100,3 +100,19 @@ def from_trs(tx, ty, sx, sy, rotate_degrees):
     if rotate_degrees:
         m = compose(m, rotate(rotate_degrees))
     return m
+
+
+def decompose(m):
+    """Decompose a transform into {tx, ty, sx, sy, rotate} matching from_trs.
+
+    Inverts from_trs (translate ∘ scale ∘ rotate). Exact when the matrix is a
+    translate/scale/rotate with no shear; a manipulation committed at the root
+    under a uniform camera is exact. Shear (possible only when conjugating
+    through a rotated, non-uniformly-scaled ancestor) is dropped.
+    """
+    a, b, c, d, e, f = m
+    sx = math.hypot(a, c)
+    rotate_degrees = math.degrees(math.atan2(-c, a))
+    det = a * d - b * c
+    sy = det / sx if sx else math.hypot(b, d)
+    return {"tx": e, "ty": f, "sx": sx, "sy": sy, "rotate": rotate_degrees}

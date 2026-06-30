@@ -33,12 +33,14 @@ def test_normalize_is_idempotent(name):
 
 
 def test_find_move_and_parent():
+    # Move now writes the node's own transform translation (every node has one),
+    # leaving geometry untouched.
     doc = _doc()
     box = world.find_node(doc, "root.box")
     assert box["type"] == "rect"
-    x0, y0 = box["x"], box["y"]
+    tx0, ty0 = box["transform"]["tx"], box["transform"]["ty"]
     world.move_node(doc, "root.box", 15.0, -5.0)
-    assert (box["x"], box["y"]) == (x0 + 15.0, y0 - 5.0)
+    assert (box["transform"]["tx"], box["transform"]["ty"]) == (tx0 + 15.0, ty0 - 5.0)
     parent, last = world.get_parent(doc, "root.box")
     assert parent["id"] == "root" and last == "box"
 
@@ -48,12 +50,12 @@ def test_move_inside_scaled_group_uses_local_delta():
     # must convert to the child's local frame so it lands where expected.
     doc = _doc()
     r = world.find_node(doc, "root.spun.r")
-    x0 = r["x"]
+    tx0 = r["transform"]["tx"]
     world.move_node(doc, "root.spun.r", 14.0, 0.0)
     # World dx 14 inside a 1.4x scaled (and rotated) parent is a smaller local
     # delta; it must differ from a naive +14 and from 0.
-    assert r["x"] != x0
-    assert abs(r["x"] - (x0 + 14.0)) > 1e-6
+    assert r["transform"]["tx"] != tx0
+    assert abs(r["transform"]["tx"] - (tx0 + 14.0)) > 1e-6
 
 
 def test_add_delete_replace_roundtrip(tmp_path):
@@ -109,6 +111,44 @@ def test_add_connection_dedupes_unordered():
     assert len(doc["connections"]) == 1
 
 
+def test_handle_mode_cycles_on_reclick():
+    from vectorloom.editor import discrete, events as E
+    st = discrete.make_initial_state(None, payload={"doc_path": "x"})
+    st, _ = discrete.reduce(st, {"type": E.SET_SELECTION, "path": "root.box"}, None)
+    assert st["selection"] == "root.box" and st["handle_mode"] == E.MODE_SELECT
+    st, _ = discrete.reduce(st, {"type": E.SET_SELECTION, "path": "root.box"}, None)
+    assert st["handle_mode"] == E.MODE_RESIZE
+    st, _ = discrete.reduce(st, {"type": E.SET_SELECTION, "path": "root.box"}, None)
+    assert st["handle_mode"] == E.MODE_ROTATE
+    st, _ = discrete.reduce(st, {"type": E.SET_SELECTION, "path": "root.box"}, None)
+    assert st["handle_mode"] == E.MODE_RESIZE  # cycles back, never mixes
+    # Selecting a different node resets to plain select.
+    st, _ = discrete.reduce(st, {"type": E.SET_SELECTION, "path": "root.other"}, None)
+    assert st["selection"] == "root.other" and st["handle_mode"] == E.MODE_SELECT
+
+
+def test_apply_screen_transform_bakes_scale_and_rotate():
+    from vectorloom import geometry as geo
+
+    def one_rect():
+        return model.normalize_document({"root": {"type": "group", "id": "root", "children": [
+            {"type": "rect", "id": "box", "x": 0, "y": 0, "w": 100, "h": 50}]}})
+
+    # Screen-space 2x scale about (10,10), identity camera -> sx=sy=2.
+    doc = one_rect()
+    o = geo.compose(geo.translate(10, 10), geo.compose(geo.scale(2.0, 2.0), geo.translate(-10, -10)))
+    world.apply_screen_transform(doc, "root.box", o, geo.IDENTITY)
+    t = world.find_node(doc, "root.box")["transform"]
+    assert abs(t["sx"] - 2.0) < 1e-9 and abs(t["sy"] - 2.0) < 1e-9 and abs(t["rotate"]) < 1e-9
+
+    # Screen-space 90deg rotation, identity camera -> rotate=90, scale preserved.
+    doc = one_rect()
+    world.apply_screen_transform(doc, "root.box", geo.rotate(90), geo.IDENTITY)
+    t = world.find_node(doc, "root.box")["transform"]
+    assert abs(t["rotate"] - 90.0) < 1e-6
+    assert abs(t["sx"] - 1.0) < 1e-9 and abs(t["sy"] - 1.0) < 1e-9
+
+
 def test_history_undo_redo():
     doc = _doc()
     path = "history-doc"
@@ -120,7 +160,7 @@ def test_history_undo_redo():
     assert history.can_undo(path)
 
     snap = history.undo(path)
-    assert snap["doc"]["root"]["children"][0]["x"] != doc["root"]["children"][0]["x"]
+    assert snap["doc"]["root"]["children"][0]["transform"]["tx"] != doc["root"]["children"][0]["transform"]["tx"]
     again = history.redo(path)
     assert again["selection"] == "root.box"
 
@@ -163,12 +203,12 @@ def test_cira_loop_select_and_drag(tmp_path):
 
         # drag-move
         disc = world.find_node(world.get(doc_path), "root.disc")
-        x0 = disc["x"]
+        tx0 = disc["transform"]["tx"]
         raw(cx, cy, True); village.run_ticks(1, update_tk=True)
         raw(cx + 60, cy, True); village.run_ticks(1, update_tk=True)
         raw(cx + 60, cy, False); village.run_ticks(2, update_tk=True)
         disc = world.find_node(world.get(doc_path), "root.disc")
-        assert disc["x"] > x0  # moved right
+        assert disc["transform"]["tx"] > tx0  # moved right
     finally:
         village.shutdown()
         import shutil

@@ -24,6 +24,7 @@ def make_initial_state(_rt, key=None, payload=None):
     return {
         "doc_path": payload["doc_path"],
         "selection": None,
+        "handle_mode": E.MODE_SELECT,
         "scale": 1.0,
         "ox": 0.0,
         "oy": 0.0,
@@ -38,10 +39,31 @@ def reduce(state, event, doc):
 
     if kind == E.SET_SELECTION:
         new = dict(state)
-        new["selection"] = event["path"]
-        new["status"] = f"Selected {event['path']}" if event["path"] else "Deselected"
+        path = event["path"]
+        if path is None:
+            new["selection"] = None
+            new["handle_mode"] = E.MODE_SELECT
+            new["status"] = "Deselected"
+        elif path == state["selection"]:
+            # Re-clicking the selected node cycles its handle mode.
+            new["handle_mode"] = E.HANDLE_MODE_CYCLE[state["handle_mode"]]
+            new["status"] = f"{new['handle_mode'].title()} handles"
+        else:
+            new["selection"] = path
+            new["handle_mode"] = E.MODE_SELECT
+            new["status"] = f"Selected {path}"
         new["status_kind"] = "info"
         return new, []
+
+    if kind == E.NODE_TRANSFORMED:
+        new = dict(state)
+        new["selection"] = event["path"]
+        new["status"] = "Rotated" if state["handle_mode"] == E.MODE_ROTATE else "Resized"
+        new["status_kind"] = "ok"
+        return new, [
+            {"type": E.WORLD_MUTATE, "op": E.OP_TRANSFORM, "path": event["path"], "transform": event["transform"]},
+            {"type": E.CHECKPOINT},
+        ]
 
     if kind == E.NODE_MOVED:
         new = dict(state)

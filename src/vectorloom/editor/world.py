@@ -109,15 +109,36 @@ def is_group(doc, path):
 # --------------------------------------------------------------------------
 
 def move_node(doc, path, world_dx, world_dy):
-    """Shift a node by a document-world delta, converting it into the node's
-    parent-local frame so the move is correct even inside scaled/rotated groups.
-    """
+    """Shift a node by a document-world delta, written into the node's own
+    transform translation. Converting through the parent-local frame keeps the
+    move correct even inside scaled/rotated groups. Every node has a transform,
+    so move/resize/rotate all write the same place."""
     node = find_node(doc, path)
     if node is None:
         return
     parent_m = _parent_frame(doc, path)
     local_dx, local_dy = geo.apply_vector(geo.invert(parent_m), world_dx, world_dy)
-    _shift_local(node, local_dx, local_dy)
+    node["transform"]["tx"] += local_dx
+    node["transform"]["ty"] += local_dy
+
+
+def apply_screen_transform(doc, path, screen_m, camera):
+    """Bake a screen-space manipulation (resize/rotate overlay) into the node's
+    own transform. The screen transform is conjugated into the node's local frame
+    and decomposed back to {tx, ty, sx, sy, rotate}:
+
+        T_new = (camera ∘ parent)^-1  ∘  screen_m  ∘  (camera ∘ parent)  ∘  T_node
+
+    so the committed model renders exactly where the preview overlay showed it.
+    """
+    node = find_node(doc, path)
+    if node is None:
+        return
+    parent_world = geo.compose(camera, _parent_frame(doc, path))
+    t = node["transform"]
+    t_node = geo.from_trs(t["tx"], t["ty"], t["sx"], t["sy"], t["rotate"])
+    conjugated = geo.compose(geo.compose(geo.invert(parent_world), screen_m), parent_world)
+    node["transform"] = geo.decompose(geo.compose(conjugated, t_node))
 
 
 def add_child(doc, parent_path, raw_node):
@@ -194,24 +215,5 @@ def _parent_frame(doc, path):
 
 
 def _node_transform(node):
-    if node["type"] in (S.GROUP, S.INSTANCE):
-        t = node["transform"]
-        return geo.from_trs(t["tx"], t["ty"], t["sx"], t["sy"], t["rotate"])
-    return geo.IDENTITY
-
-
-def _shift_local(node, dx, dy):
-    kind = node["type"]
-    if kind in (S.GROUP, S.INSTANCE):
-        node["transform"]["tx"] += dx
-        node["transform"]["ty"] += dy
-    elif kind == S.LINE:
-        node["x1"] += dx
-        node["y1"] += dy
-        node["x2"] += dx
-        node["y2"] += dy
-    elif kind == S.POLYLINE:
-        node["points"] = [[p[0] + dx, p[1] + dy] for p in node["points"]]
-    else:  # rect, oval, port, text
-        node["x"] += dx
-        node["y"] += dy
+    t = node["transform"]
+    return geo.from_trs(t["tx"], t["ty"], t["sx"], t["sy"], t["rotate"])

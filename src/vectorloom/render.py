@@ -114,16 +114,15 @@ def resolve_connectors(doc, base_transform=geo.IDENTITY, overlay=None):
 
 def _walk_connectors(node, world_m, path, defs, ctx):
     world_m = _with_overlay(world_m, path, ctx["overlay"])
+    world_m = geo.compose(world_m, geo.from_trs(**_trs(node)))
     kind = node["type"]
     if kind == S.GROUP:
-        m = geo.compose(world_m, geo.from_trs(**_trs(node)))
         for child in node["children"]:
-            _walk_connectors(child, m, f"{path}.{child['id']}", defs, ctx)
-        _collect_connectors(node, m, path, ctx)
+            _walk_connectors(child, world_m, f"{path}.{child['id']}", defs, ctx)
+        _collect_connectors(node, world_m, path, ctx)
     elif kind == S.INSTANCE:
-        m = geo.compose(world_m, geo.from_trs(**_trs(node)))
-        _walk_connectors(defs[node["def"]], m, f"{path}={node['def']}", defs, ctx)
-        _collect_connectors(node, m, path, ctx)
+        _walk_connectors(defs[node["def"]], world_m, f"{path}={node['def']}", defs, ctx)
+        _collect_connectors(node, world_m, path, ctx)
     elif kind == S.PORT:
         wx, wy = geo.apply_point(world_m, node["x"], node["y"])
         ctx["connectors"].append({
@@ -143,21 +142,18 @@ def _connector_key(render_path):
 
 def _draw_node(canvas, node, world_m, path, ctx):
     world_m = _with_overlay(world_m, path, ctx["overlay"])
+    world_m = geo.compose(world_m, geo.from_trs(**_trs(node)))  # node's own transform (all types)
     kind = node["type"]
     if kind == S.GROUP:
-        local = geo.from_trs(**_trs(node))
-        child_m = geo.compose(world_m, local)
         for child in node["children"]:
-            _draw_node(canvas, child, child_m, f"{path}.{child['id']}", ctx)
-        _collect_connectors(node, child_m, path, ctx)
+            _draw_node(canvas, child, world_m, f"{path}.{child['id']}", ctx)
+        _collect_connectors(node, world_m, path, ctx)
     elif kind == S.INSTANCE:
-        local = geo.from_trs(**_trs(node))
-        inst_m = geo.compose(world_m, local)
         target = ctx["defs"][node["def"]]
         # Render the referenced def under the instance transform, but keep the
         # instance's own id in the path so two instances stay distinguishable.
-        _draw_node(canvas, target, inst_m, f"{path}={node['def']}", ctx)
-        _collect_connectors(node, inst_m, path, ctx)
+        _draw_node(canvas, target, world_m, f"{path}={node['def']}", ctx)
+        _collect_connectors(node, world_m, path, ctx)
     elif kind == S.RECT:
         _draw_polygon(canvas, _rect_points(node), node["style"], world_m, path, ctx)
     elif kind == S.OVAL:
@@ -374,14 +370,13 @@ def _child_by_id(group, node_id):
 
 
 def _bounds_node(node, world_m, defs, acc):
+    world_m = geo.compose(world_m, geo.from_trs(**_trs(node)))  # node's own transform (all types)
     kind = node["type"]
     if kind == S.GROUP:
-        m = geo.compose(world_m, geo.from_trs(**_trs(node)))
         for child in node["children"]:
-            _bounds_node(child, m, defs, acc)
+            _bounds_node(child, world_m, defs, acc)
     elif kind == S.INSTANCE:
-        m = geo.compose(world_m, geo.from_trs(**_trs(node)))
-        _bounds_node(defs[node["def"]], m, defs, acc)
+        _bounds_node(defs[node["def"]], world_m, defs, acc)
     elif kind == S.RECT:
         acc["pts"].extend(geo.apply_points(world_m, _rect_points(node)))
     elif kind == S.OVAL:

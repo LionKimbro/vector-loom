@@ -9,6 +9,7 @@ convention: uppercase names bound to identical string constants.
 # --- semantic events (Continuity / GUI -> Discrete Engine) ---
 SET_SELECTION = "SET_SELECTION"
 NODE_MOVED = "NODE_MOVED"
+NODE_TRANSFORMED = "NODE_TRANSFORMED"   # resize/rotate commit: carries a screen-space transform
 NODE_FIELD_CHANGED = "NODE_FIELD_CHANGED"
 NODE_ADDED = "NODE_ADDED"
 NODE_DELETED = "NODE_DELETED"
@@ -16,6 +17,13 @@ SAVE_FILE = "SAVE_FILE"
 LOAD_FILE = "LOAD_FILE"
 UNDO = "UNDO"
 REDO = "REDO"
+
+# --- handle modes (Discrete-owned per-selection focus) ---
+# Re-clicking the selected node cycles SELECT -> RESIZE -> ROTATE -> RESIZE ...
+MODE_SELECT = "SELECT"
+MODE_RESIZE = "RESIZE"
+MODE_ROTATE = "ROTATE"
+HANDLE_MODE_CYCLE = {MODE_SELECT: MODE_RESIZE, MODE_RESIZE: MODE_ROTATE, MODE_ROTATE: MODE_RESIZE}
 
 # camera events (not undoable; emit no checkpoint)
 PAN_BY = "PAN_BY"
@@ -36,8 +44,14 @@ OP_ADD = "add"
 OP_DELETE = "delete"
 OP_REPLACE = "replace"
 OP_CONNECT = "connect"
+OP_TRANSFORM = "transform"   # bake a screen-space transform into a node
 
 # --- immediates (Continuity -> Projection, single frame, volatile) ---
-DRAG_PREVIEW = "DRAG_PREVIEW"
+DRAG_PREVIEW = "DRAG_PREVIEW"      # move: carries path, sdx, sdy
+TRANSFORM_PREVIEW = "TRANSFORM_PREVIEW"  # resize/rotate: carries path + screen transform
 HOVER = "HOVER"
 SNAP = "SNAP"   # a connector pair is within snap range during a drag
+
+# handle kinds (projection affordances, hit-tested by continuity)
+HANDLE_RESIZE = "resize"
+HANDLE_ROTATE = "rotate"

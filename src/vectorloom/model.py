@@ -197,15 +197,19 @@ def _normalize_node(raw, styles):
 
     node = {"type": kind, "id": raw.get("id") or _next_id(kind), "style": _resolve_node_style(raw, styles)}
 
+    # Every node carries a transform, so move/resize/rotate are uniform. For
+    # group/instance the x/y/scale shorthand means translate/scale; for
+    # primitives x/y are geometry, so their transform comes only from an explicit
+    # canonical `transform` dict (default identity).
+    node["transform"] = _normalize_transform(raw, allow_shorthand=kind in (S.GROUP, S.INSTANCE))
+
     if kind == S.GROUP:
-        node["transform"] = _normalize_transform(raw)
         node["connectors"] = _normalize_connectors(raw.get("connectors", {}))
         node["children"] = [_normalize_node(c, styles) for c in raw.get("children", [])]
     elif kind == S.INSTANCE:
         if "def" not in raw:
             raise VloomError("instance node requires a 'def' name")
         node["def"] = raw["def"]
-        node["transform"] = _normalize_transform(raw)
         node["connectors"] = _normalize_connectors(raw.get("connectors", {}))
     elif kind == S.RECT or kind == S.OVAL:
         node["x"] = float(raw.get("x", 0.0))
@@ -239,12 +243,14 @@ def _normalize_node(raw, styles):
     return node
 
 
-def _normalize_transform(raw):
-    """Read translate/scale/rotate components, accepting shorthand keys.
+def _normalize_transform(raw, allow_shorthand=True):
+    """Read translate/scale/rotate components.
 
-    Honors an already-canonical `transform` dict so that normalizing a
-    canonical document is idempotent. This is what lets a document round-trip:
-    load, normalize, edit, save (canonical), reload, normalize again, unchanged.
+    Honors an already-canonical `transform` dict so that normalizing a canonical
+    document is idempotent (this is what lets a document round-trip). When
+    allow_shorthand is true (group/instance), x/y/scale on the node also seed the
+    transform; for primitives those keys are geometry, so allow_shorthand is
+    false and the transform defaults to identity.
     """
     t = raw.get("transform")
     if isinstance(t, dict):
@@ -255,6 +261,8 @@ def _normalize_transform(raw):
             "sy": float(t.get("sy", 1.0)),
             "rotate": float(t.get("rotate", 0.0)),
         }
+    if not allow_shorthand:
+        return _identity_transform()
     tx = float(raw.get("x", raw.get("tx", 0.0)))
     ty = float(raw.get("y", raw.get("ty", 0.0)))
     scale = raw.get("scale")

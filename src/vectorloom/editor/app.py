@@ -27,6 +27,7 @@ if _TKV_SRC not in sys.path and os.path.isdir(_TKV_SRC):
 
 import tkvillage as village  # noqa: E402
 
+from .. import geometry as geo  # noqa: E402
 from . import continuity  # noqa: E402
 from . import discrete  # noqa: E402
 from . import events as E  # noqa: E402
@@ -83,6 +84,7 @@ def _route_world_mutate(effect, state, doc):
         new_path = world.add_child(doc, effect["parent"], effect["node"])
         out = dict(state)
         out["selection"] = new_path
+        out["handle_mode"] = E.MODE_SELECT
         return out
     if op == E.OP_DELETE:
         world.delete_node(doc, effect["path"])
@@ -92,6 +94,13 @@ def _route_world_mutate(effect, state, doc):
         return state
     if op == E.OP_CONNECT:
         world.add_connection(doc, effect["connect"]["from"], effect["connect"]["to"])
+        return state
+    if op == E.OP_TRANSFORM:
+        # The transform is in screen space; baking it needs the camera so it can
+        # be conjugated into the node's local frame.
+        camera = geo.compose(geo.translate(state["ox"], state["oy"]),
+                             geo.scale(state["scale"], state["scale"]))
+        world.apply_screen_transform(doc, effect["path"], tuple(effect["transform"]), camera)
         return state
     return state
 
