@@ -248,6 +248,24 @@ def test_connector_snap_aligns_on_commit(tmp_path):
         assert len(conns) == 1
         assert conns[0]["from"]["node"] == "root.launch"
         assert conns[0]["to"]["node"] == "root.stage"
+
+        # Dragging a connected node makes its attached wire endpoint follow live,
+        # without mutating the model (projection-only preview).
+        canvas = rec["widgets"]["canvas"]
+
+        def wire():
+            return [c for c in rec["projection"]["connections"]
+                    if c["from_node"] == "root.launch" and c["to_node"] == "root.stage"][0]
+
+        rest_a, rest_b = wire()["a"], wire()["b"]
+        bb2 = render.path_world_bounds(world.get(doc_path), "root.launch", base)
+        lx, ly = (bb2[0] + bb2[2]) / 2.0, (bb2[1] + bb2[3]) / 2.0
+        raw(lx, ly, True); village.run_ticks(1, update_tk=True)
+        raw(lx + 45, ly + 35, True); village.run_ticks(1, update_tk=True)  # active drag tick
+        coords = canvas.coords(wire()["item"])
+        assert abs(coords[0] - (rest_a[0] + 45)) < 3 and abs(coords[1] - (rest_a[1] + 35)) < 3  # launch end followed
+        assert abs(coords[2] - rest_b[0]) < 2 and abs(coords[3] - rest_b[1]) < 2  # stage end fixed
+        raw(lx + 45, ly + 35, False); village.run_ticks(2, update_tk=True)
     finally:
         village.shutdown()
         if os.path.isdir(".vl-snap"):

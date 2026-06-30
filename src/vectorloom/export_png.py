@@ -37,7 +37,8 @@ def _draw_connections(draw, doc, base):
     """Draw connection wires, reusing the renderer's shared resolution so the
     PNG matches what the on-screen runtime draws."""
     connectors = render.resolve_connectors(doc, base)
-    for a, b, style in render.connection_segments(doc, connectors):
+    for conn, a, b in render.connection_segments(doc, connectors):
+        style = conn["style"]
         draw.line([a, b], fill=(style["stroke"] or "#1565c0"), width=int(render._stroke_px(style, base)))
 
 

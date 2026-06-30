@@ -33,17 +33,27 @@ def render_document(canvas, doc, base_transform=geo.IDENTITY):
     base_transform lets a viewer or editor inject pan/zoom as an outer camera
     transform. The caller owns clearing the canvas.
     """
-    ctx = {"defs": doc["defs"], "items": [], "by_item": {}, "connectors": []}
+    ctx = {"defs": doc["defs"], "items": [], "by_item": {}, "connectors": [], "connections": []}
     _draw_node(canvas, doc["root"], base_transform, doc["root"]["id"], ctx)
     _draw_connections(canvas, doc, ctx, base_transform)
-    return {"items": ctx["items"], "by_item": ctx["by_item"], "connectors": ctx["connectors"]}
+    return {
+        "items": ctx["items"],
+        "by_item": ctx["by_item"],
+        "connectors": ctx["connectors"],
+        "connections": ctx["connections"],
+    }
 
 
 def _draw_connections(canvas, doc, ctx, base_transform):
     """Draw wires between connected connectors. Connection items are not
     registered in by_item, so they are decorative relations: not hit-tested,
-    not draggable. Endpoints that do not resolve are skipped."""
-    for a, b, style in connection_segments(doc, ctx["connectors"]):
+    not draggable. Endpoints that do not resolve are skipped.
+
+    Each drawn wire is also recorded in ctx["connections"] with its item id, the
+    two endpoint node paths, and the endpoint positions, so a live drag can nudge
+    the attached endpoint without re-rendering or mutating the model."""
+    for conn, a, b in connection_segments(doc, ctx["connectors"]):
+        style = conn["style"]
         item = canvas.create_line(
             a[0], a[1], b[0], b[1],
             fill=(style["stroke"] or "#1565c0"),
@@ -51,12 +61,18 @@ def _draw_connections(canvas, doc, ctx, base_transform):
             dash=_dash(style, base_transform),
         )
         ctx["items"].append(item)
+        ctx["connections"].append({
+            "id": conn["id"], "item": item,
+            "from_node": conn["from"]["node"], "to_node": conn["to"]["node"],
+            "a": a, "b": b,
+        })
 
 
 def connection_segments(doc, connectors):
-    """Resolve each connection to (point_a, point_b, style) using the supplied
-    connector world positions. Shared by the Canvas renderer and PNG exporter so
-    both draw connections identically. Endpoints that do not resolve are dropped.
+    """Resolve each connection to (connection, point_a, point_b) using the
+    supplied connector world positions. Shared by the Canvas renderer and PNG
+    exporter so both draw connections identically. Endpoints that do not resolve
+    are dropped.
     """
     lookup = {}
     for c in connectors:
@@ -66,7 +82,7 @@ def connection_segments(doc, connectors):
         a = lookup.get((conn["from"]["node"], conn["from"]["name"]))
         b = lookup.get((conn["to"]["node"], conn["to"]["name"]))
         if a is not None and b is not None:
-            segments.append((a, b, conn["style"]))
+            segments.append((conn, a, b))
     return segments
 
 

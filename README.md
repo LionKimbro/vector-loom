@@ -115,7 +115,9 @@ target — with a live ring overlay — and records a durable **connection** in 
 document. Connections are a first-class part of the format (a top-level
 `connections` list of `{from, to}` connector references); the runtime renders
 them as wires that resolve at render time, so they follow their endpoints when
-nodes move. The snap-move and the connection commit as one undo step. Snap is a
+nodes move — including **live during a drag** (Projection nudges the attached
+wire endpoint each frame without touching the model). The snap-move and the
+connection commit as one undo step. Snap is a
 tokenizer (spatial candidate computation) consulted by the move organism — the
 core of the Diagram Workbench.
 
