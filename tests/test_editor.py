@@ -141,3 +141,60 @@ def test_cira_loop_select_and_drag(tmp_path):
         for d in (".vl-test",):
             if os.path.isdir(d):
                 shutil.rmtree(d, ignore_errors=True)
+
+
+def test_connector_snap_aligns_on_commit(tmp_path):
+    import math
+    village = pytest.importorskip("tkvillage")
+    from vectorloom import geometry as geo, render
+    from vectorloom.editor import app, continuity
+    import shutil
+
+    src = os.path.join(EXAMPLES, "folder_node.vloom.json")
+    doc_path = str(tmp_path / "snap.vloom.json")
+    shutil.copy(src, doc_path)
+
+    def conn(rec, role, sub):
+        return [c for c in rec["projection"]["connectors"]
+                if c["role"] == role and continuity._in_subtree(c["path"], sub)][0]
+
+    try:
+        world.load(doc_path)
+        history.init(doc_path, world.get(doc_path), None)
+        village.create_app("vl-snap", ".vl-snap", test_mode=True)
+    except Exception:
+        pytest.skip("Tk not available")
+
+    try:
+        app.register()
+        rec = village.summon_window(app.CANVAS_WINDOW, key=doc_path, payload={"doc_path": doc_path})
+        village.run_ticks(3, update_tk=True)
+
+        s = rec["state"]
+        base = geo.compose(geo.translate(s["ox"], s["oy"]), geo.scale(s["scale"], s["scale"]))
+        out = conn(rec, "output", "root.launch")
+        inp = conn(rec, "input", "root.stage")
+        bb = render.path_world_bounds(world.get(doc_path), "root.launch", base)
+        cx, cy = (bb[0] + bb[2]) / 2.0, (bb[1] + bb[3]) / 2.0
+        adx = inp["world"][0] - out["world"][0]
+        ady = inp["world"][1] - out["world"][1]
+        cur = rec["raw"]["current"]
+
+        def raw(x, y, down):
+            cur["x"], cur["y"], cur["button1_down"] = x, y, down
+
+        # Drag launch so its output approaches stage's input, stopping ~8px short
+        # (inside the snap threshold) to prove the snap closes the gap.
+        raw(cx, cy, True); village.run_ticks(1, update_tk=True)
+        raw(cx + adx - 6, cy + ady - 6, True); village.run_ticks(1, update_tk=True)
+        assert any(i["type"] == "SNAP" for i in rec["immediates"])
+        raw(cx + adx - 6, cy + ady - 6, False); village.run_ticks(2, update_tk=True)
+
+        out2 = conn(rec, "output", "root.launch")
+        inp2 = conn(rec, "input", "root.stage")
+        gap = math.hypot(out2["world"][0] - inp2["world"][0], out2["world"][1] - inp2["world"][1])
+        assert gap < 1.5  # connectors aligned by the snap
+    finally:
+        village.shutdown()
+        if os.path.isdir(".vl-snap"):
+            shutil.rmtree(".vl-snap", ignore_errors=True)

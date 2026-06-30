@@ -39,3 +39,4 @@ OP_REPLACE = "replace"
 # --- immediates (Continuity -> Projection, single frame, volatile) ---
 DRAG_PREVIEW = "DRAG_PREVIEW"
 HOVER = "HOVER"
+SNAP = "SNAP"   # a connector pair is within snap range during a drag

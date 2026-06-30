@@ -77,6 +77,8 @@ def project(_rt, record):
     canvas.delete("all")
     result = render.render_document(canvas, doc, base)
     record["projection"]["by_item"] = result["by_item"]
+    # Expose resolved connector world positions so the snap tokenizer can read them.
+    record["projection"]["connectors"] = result["connectors"]
 
     _draw_overlays(canvas, doc, state, base, result["by_item"], record.get("immediates", []))
     _update_inspector(record, doc, state)
@@ -102,6 +104,10 @@ def _draw_overlays(canvas, doc, state, base, by_item, immediates):
             canvas.create_rectangle(
                 minx + drag["sdx"], miny + drag["sdy"], maxx + drag["sdx"], maxy + drag["sdy"],
                 outline="#1565c0", width=2, dash=(4, 2))
+        snap = next((i for i in immediates if i["type"] == E.SNAP), None)
+        if snap is not None:
+            tx, ty = snap["target_world"]
+            canvas.create_oval(tx - 9, ty - 9, tx + 9, ty + 9, outline="#ff6f00", width=3)
         return  # suppress hover/static selection while dragging
 
     for imm in immediates:

@@ -108,8 +108,15 @@ add/delete rect/oval/line/polyline/port/group, edit node JSON, save, reload, and
 undo/redo — all on full CIRA. The pure runtime (format, renderer, PNG export,
 viewer) is dependency-free except Pillow.
 
-Dragging moves the real shape live under the cursor. Next: connector **snap**
-organisms (Diagram Workbench), a Glyph Workbench (strokes/baselines/advance
-width), and a SoftSpec formalization of the format. Text is experimental —
-tkinter Canvas text does not scale/rotate consistently; a stroke-font built from
-these same primitives may replace it.
+Dragging moves the real shape live under the cursor, and **connector snapping**
+works: dragging a node with ports near a compatible connector (output↔input,
+bidirectional↔any, anchor↔anchor) snaps it exactly onto the target, with a live
+ring overlay marking the connection. Snap is a tokenizer (spatial candidate
+computation) consulted by the move organism — the first piece of the Diagram
+Workbench.
+
+Next: a CONNECT semantic action that records an actual edge/wire when a snap
+commits, a Glyph Workbench (strokes/baselines/advance width), and a SoftSpec
+formalization of the format. Text is experimental — tkinter Canvas text does not
+scale/rotate consistently; a stroke-font built from these same primitives may
+replace it.

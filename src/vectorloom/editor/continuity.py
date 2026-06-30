@@ -18,10 +18,12 @@ disturbing the reducer or projection.
 
 import math
 
+from .. import symbols as S
 from . import events as E
 from . import world
 
 DRAG_THRESHOLD = 4.0  # pixels before a press becomes a drag
+SNAP_THRESHOLD = 16.0  # pixels within which a dragged connector snaps to another
 
 
 def init_continuity(record):
@@ -77,9 +79,18 @@ def tokenize(record):
     if pressed:
         book["press_x"], book["press_y"], book["press_target"] = cur["x"], cur["y"], target
 
-    crossed = False
-    if cur["button1_down"] and book["press_x"] is not None:
-        crossed = math.hypot(cur["x"] - book["press_x"], cur["y"] - book["press_y"]) > DRAG_THRESHOLD
+    moved = book["press_x"] is not None and \
+        math.hypot(cur["x"] - book["press_x"], cur["y"] - book["press_y"]) > DRAG_THRESHOLD
+    crossed = cur["button1_down"] and moved
+
+    # Compute snap throughout a drag, including the release frame (button is
+    # already up there but `released` is true), so the committed NODE_MOVED uses
+    # the snapped delta. Gating on button-down alone would miss the commit.
+    snap = None
+    if book["press_target"] and moved and (cur["button1_down"] or released):
+        connectors = record["projection"].get("connectors", [])
+        snap = _snap_candidate(connectors, book["press_target"],
+                               cur["x"] - book["press_x"], cur["y"] - book["press_y"])
 
     return {
         "pressed": pressed,
@@ -94,7 +105,52 @@ def tokenize(record):
         "dx": cur["x"] - prev["x"],
         "dy": cur["y"] - prev["y"],
         "threshold_crossed": crossed,
+        "snap": snap,
     }
+
+
+def _snap_candidate(connectors, dragged_path, free_dx, free_dy):
+    """Find the best connector-snap for the current free drag delta, or None.
+
+    Connector world positions are in screen coordinates (the renderer applies
+    the camera), so the snap delta that lands a dragged connector exactly on a
+    target is simply target - source. We pick the compatible pair whose snap
+    delta is closest to the free drag delta and within SNAP_THRESHOLD pixels.
+    This is pure spatial candidate computation: a tokenizer job, no behavior.
+    """
+    sources = [c for c in connectors if _in_subtree(c["path"], dragged_path)]
+    targets = [c for c in connectors if not _in_subtree(c["path"], dragged_path)]
+    best = None
+    best_dist = SNAP_THRESHOLD
+    for s in sources:
+        for t in targets:
+            if not _roles_compatible(s["role"], t["role"]):
+                continue
+            snap_dx = t["world"][0] - s["world"][0]
+            snap_dy = t["world"][1] - s["world"][1]
+            dist = math.hypot(free_dx - snap_dx, free_dy - snap_dy)
+            if dist < best_dist:
+                best_dist = dist
+                best = {"sdx": snap_dx, "sdy": snap_dy, "source": s, "target": t}
+    return best
+
+
+def _in_subtree(conn_path, node_path):
+    return (conn_path == node_path
+            or conn_path.startswith(node_path + ".")
+            or conn_path.startswith(node_path + "=")
+            or conn_path.startswith(node_path + ":"))
+
+
+def _roles_compatible(a, b):
+    """Connector attachment policy: where role finally earns its keep."""
+    if S.ROLE_BIDIRECTIONAL in (a, b):
+        return True
+    if {a, b} == {S.ROLE_INPUT, S.ROLE_OUTPUT}:
+        return True
+    if a == S.ROLE_ANCHOR and b == S.ROLE_ANCHOR:
+        return True
+    return False
 
 
 def run_organisms(record, derived, out_events):
@@ -147,13 +203,28 @@ def _drag(o, d, judge, out, gesture, record, disc):
     if o["state"] == "ARMED" and d["threshold_crossed"] and _commit(judge, "pointer", "drag"):
         o["state"] = "ACTIVE"
     if o["state"] == "ACTIVE":
-        sdx = d["sx"] - d["press_x"]
-        sdy = d["sy"] - d["press_y"]
+        # When the snap tokenizer found a compatible connector, drive both the
+        # preview and the committed move to the snapped delta so the shape locks
+        # onto the target connector. Otherwise use the free drag delta.
+        snap = d["snap"]
+        if snap is not None:
+            sdx, sdy = snap["sdx"], snap["sdy"]
+        else:
+            sdx = d["sx"] - d["press_x"]
+            sdy = d["sy"] - d["press_y"]
         # Always hold the live preview, including on the release frame. NODE_MOVED
         # is reduced one tick later; keeping the preview this frame bridges that
         # gap so the shape never flickers back to its origin before the model
         # catches up.
         record["immediates"].append({"type": E.DRAG_PREVIEW, "path": o["path"], "sdx": sdx, "sdy": sdy})
+        if snap is not None:
+            record["immediates"].append({
+                "type": E.SNAP,
+                "target_world": snap["target"]["world"],
+                "source_name": snap["source"]["name"],
+                "target_name": snap["target"]["name"],
+                "target_path": snap["target"]["path"],
+            })
         gesture["consumed"] = True
         if d["released"]:
             scale = disc["scale"] or 1.0
