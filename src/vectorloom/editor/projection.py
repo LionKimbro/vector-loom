@@ -74,38 +74,36 @@ def project(_rt, record):
             state["fit_pending"] = False
 
     base = geo.compose(geo.translate(state["ox"], state["oy"]), geo.scale(state["scale"], state["scale"]))
+
+    # During a live drag, the dragged node carries a temporary transform intercept
+    # at its path. The renderer resolves the node, its subtree, its connectors,
+    # and any connection wires through that one extra transform, producing a
+    # coherent preview without mutating the model.
+    drag = next((i for i in record.get("immediates", []) if i["type"] == E.DRAG_PREVIEW), None)
+    overlay = {drag["path"]: geo.translate(drag["sdx"], drag["sdy"])} if drag else None
+
     canvas.delete("all")
-    result = render.render_document(canvas, doc, base)
+    result = render.render_document(canvas, doc, base, overlay=overlay)
     record["projection"]["by_item"] = result["by_item"]
-    # Expose resolved connector world positions so the snap tokenizer can read them.
     record["projection"]["connectors"] = result["connectors"]
     record["projection"]["connections"] = result["connections"]
 
-    _draw_overlays(canvas, doc, state, base, result["by_item"], result["connections"], record.get("immediates", []))
+    _draw_overlays(canvas, doc, state, base, overlay, drag, record.get("immediates", []))
     _update_inspector(record, doc, state)
     _update_status(record, state)
 
 
 # --------------------------------------------------------------------------
-# overlays
+# selection / hover / snap overlays (the model-untouched decorations)
 # --------------------------------------------------------------------------
 
-def _draw_overlays(canvas, doc, state, base, by_item, connections, immediates):
-    drag = next((i for i in immediates if i["type"] == E.DRAG_PREVIEW), None)
-
+def _draw_overlays(canvas, doc, state, base, overlay, drag, immediates):
     if drag is not None:
-        # Live drag: shift the actual rendered items of the dragged node by the
-        # current pixel delta, so the real shape follows the cursor. The model
-        # is untouched until NODE_MOVED commits on release. Re-render each tick
-        # draws at the origin; this move re-applies the cumulative delta.
-        _move_subtree(canvas, by_item, drag["path"], drag["sdx"], drag["sdy"])
-        _drag_connections(canvas, connections, drag["path"], drag["sdx"], drag["sdy"])
-        bb = render.path_world_bounds(doc, drag["path"], base)
+        # Bounds resolve through the same overlay, so the selection rectangle
+        # tracks the dragged node's previewed position.
+        bb = render.path_world_bounds(doc, drag["path"], base, overlay=overlay)
         if bb:
-            minx, miny, maxx, maxy = _pad(bb, 3)
-            canvas.create_rectangle(
-                minx + drag["sdx"], miny + drag["sdy"], maxx + drag["sdx"], maxy + drag["sdy"],
-                outline="#1565c0", width=2, dash=(4, 2))
+            canvas.create_rectangle(*_pad(bb, 3), outline="#1565c0", width=2, dash=(4, 2))
         snap = next((i for i in immediates if i["type"] == E.SNAP), None)
         if snap is not None:
             tx, ty = snap["target_world"]
@@ -122,33 +120,6 @@ def _draw_overlays(canvas, doc, state, base, by_item, connections, immediates):
         bb = render.path_world_bounds(doc, state["selection"], base)
         if bb:
             canvas.create_rectangle(*_pad(bb, 3), outline="#1565c0", width=2, dash=(4, 2))
-
-
-def _move_subtree(canvas, by_item, path, dx, dy):
-    """Shift every rendered item belonging to a node (and its subtree) by (dx, dy)."""
-    for item, item_path in by_item.items():
-        if item_path == path or item_path.startswith(path + ".") or item_path.startswith(path + "="):
-            canvas.move(item, dx, dy)
-
-
-def _drag_connections(canvas, connections, path, dx, dy):
-    """Nudge only the wire endpoints attached to the dragged node, so connections
-    follow during a live drag. A wire usually has one fixed end, so we move
-    individual endpoints with canvas.coords rather than the whole line. The model
-    is not touched; on commit the wire re-renders from the moved connectors."""
-    for cr in connections:
-        ax, ay = cr["a"]
-        bx, by = cr["b"]
-        if _node_in_subtree(cr["from_node"], path):
-            ax, ay = ax + dx, ay + dy
-        if _node_in_subtree(cr["to_node"], path):
-            bx, by = bx + dx, by + dy
-        if (ax, ay) != cr["a"] or (bx, by) != cr["b"]:
-            canvas.coords(cr["item"], ax, ay, bx, by)
-
-
-def _node_in_subtree(node_path, dragged_path):
-    return node_path == dragged_path or node_path.startswith(dragged_path + ".")
 
 
 def _pad(bb, n):

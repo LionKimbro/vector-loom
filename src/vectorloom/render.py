@@ -27,13 +27,22 @@ from . import symbols as S
 _OVAL_SEGMENTS = 48
 
 
-def render_document(canvas, doc, base_transform=geo.IDENTITY):
+def render_document(canvas, doc, base_transform=geo.IDENTITY, overlay=None):
     """Draw a normalized document onto canvas and return a result dict.
 
     base_transform lets a viewer or editor inject pan/zoom as an outer camera
     transform. The caller owns clearing the canvas.
+
+    overlay is an optional {node_path: transform} map of temporary transform
+    intercepts. When the traversal reaches a node whose path is in the overlay,
+    the transform is composed (outermost, in screen space) onto the stack for
+    that node and its entire subtree. This is how continuous manipulation (a
+    live drag) produces a coherent temporary world: the dragged node's geometry,
+    connectors, connections, and bounds all resolve through the same stack,
+    without mutating the model and without post-render Canvas patching.
     """
-    ctx = {"defs": doc["defs"], "items": [], "by_item": {}, "connectors": [], "connections": []}
+    ctx = {"defs": doc["defs"], "items": [], "by_item": {}, "connectors": [],
+           "connections": [], "overlay": overlay or {}}
     _draw_node(canvas, doc["root"], base_transform, doc["root"]["id"], ctx)
     _draw_connections(canvas, doc, ctx, base_transform)
     return {
@@ -42,6 +51,13 @@ def render_document(canvas, doc, base_transform=geo.IDENTITY):
         "connectors": ctx["connectors"],
         "connections": ctx["connections"],
     }
+
+
+def _with_overlay(world_m, path, overlay):
+    """Compose a temporary overlay transform (outermost/screen space) for a node
+    whose path is intercepted. Returns world_m unchanged when there is none."""
+    extra = overlay.get(path) if overlay else None
+    return geo.compose(extra, world_m) if extra else world_m
 
 
 def _draw_connections(canvas, doc, ctx, base_transform):
@@ -86,16 +102,18 @@ def connection_segments(doc, connectors):
     return segments
 
 
-def resolve_connectors(doc, base_transform=geo.IDENTITY):
+def resolve_connectors(doc, base_transform=geo.IDENTITY, overlay=None):
     """Walk the tree and return resolved connector world positions without
-    drawing. Lets non-Canvas consumers (the PNG exporter, hit-testing helpers)
-    reuse the renderer's connector math."""
-    ctx = {"connectors": []}
+    drawing. Lets non-Canvas consumers (the PNG exporter, the snap tokenizer)
+    reuse the renderer's connector math. Pass overlay to resolve through the same
+    temporary transform intercepts the drawing pass uses."""
+    ctx = {"connectors": [], "overlay": overlay or {}}
     _walk_connectors(doc["root"], base_transform, doc["root"]["id"], doc["defs"], ctx)
     return ctx["connectors"]
 
 
 def _walk_connectors(node, world_m, path, defs, ctx):
+    world_m = _with_overlay(world_m, path, ctx["overlay"])
     kind = node["type"]
     if kind == S.GROUP:
         m = geo.compose(world_m, geo.from_trs(**_trs(node)))
@@ -124,6 +142,7 @@ def _connector_key(render_path):
 # --------------------------------------------------------------------------
 
 def _draw_node(canvas, node, world_m, path, ctx):
+    world_m = _with_overlay(world_m, path, ctx["overlay"])
     kind = node["type"]
     if kind == S.GROUP:
         local = geo.from_trs(**_trs(node))
@@ -309,20 +328,25 @@ def document_bounds(doc, base_transform=geo.IDENTITY):
     return (min(xs), min(ys), max(xs), max(ys))
 
 
-def path_world_bounds(doc, path, base_transform=geo.IDENTITY):
+def path_world_bounds(doc, path, base_transform=geo.IDENTITY, overlay=None):
     """Return the (min_x, min_y, max_x, max_y) screen bounds of the node at an
     editable dotted path (e.g. "root.box" or "root.launch"), or None.
 
     base_transform is the camera, so the result is in canvas/screen coordinates,
-    ready for drawing selection and drag overlays.
+    ready for drawing selection and drag overlays. overlay applies the same
+    temporary transform intercepts as the drawing pass, so a selection rectangle
+    tracks a node while it is being dragged.
     """
+    overlay = overlay or {}
     parts = path.split(".")
     node = doc["root"]
     if not parts or parts[0] != node["id"]:
         return None
-    # Accumulate the transform of the node's *parent* frame; _bounds_node applies
-    # the node's own transform internally.
-    m = base_transform
+    # Accumulate the transform of the node's *parent* frame, applying any overlay
+    # intercept as we enter each node. _bounds_node applies the node's own
+    # transform internally.
+    cur_path = node["id"]
+    m = _with_overlay(base_transform, cur_path, overlay)
     for seg in parts[1:]:
         if node["type"] != S.GROUP:
             return None
@@ -331,6 +355,8 @@ def path_world_bounds(doc, path, base_transform=geo.IDENTITY):
         if child is None:
             return None
         node = child
+        cur_path = f"{cur_path}.{seg}"
+        m = _with_overlay(m, cur_path, overlay)
     acc = {"pts": []}
     _bounds_node(node, m, doc["defs"], acc)
     if not acc["pts"]:

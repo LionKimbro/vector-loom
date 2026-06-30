@@ -115,9 +115,14 @@ target — with a live ring overlay — and records a durable **connection** in 
 document. Connections are a first-class part of the format (a top-level
 `connections` list of `{from, to}` connector references); the runtime renders
 them as wires that resolve at render time, so they follow their endpoints when
-nodes move — including **live during a drag** (Projection nudges the attached
-wire endpoint each frame without touching the model). The snap-move and the
-connection commit as one undo step. Snap is a
+nodes move — including **live during a drag**. Continuous manipulation is
+modeled as a **temporary transform intercept** in the tree traversal (an
+`overlay` of `{node_path: transform}`): the renderer composes the drag transform
+onto the stack when it reaches the dragged node, so the node, its subtree, its
+connectors, its bounds, snap candidates, and connection wires all resolve
+through the same stack — a coherent temporary world, with the model untouched
+and no post-render Canvas patching. The snap-move and the connection commit as
+one undo step. Snap is a
 tokenizer (spatial candidate computation) consulted by the move organism — the
 core of the Diagram Workbench.
 

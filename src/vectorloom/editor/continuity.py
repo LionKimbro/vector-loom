@@ -18,9 +18,20 @@ disturbing the reducer or projection.
 
 import math
 
+from .. import geometry as geo
+from .. import render
 from .. import symbols as S
 from . import events as E
 from . import world
+
+
+def _doc_of(record):
+    return world.get(record["state"]["doc_path"])
+
+
+def _camera_of(record):
+    s = record["state"]
+    return geo.compose(geo.translate(s["ox"], s["oy"]), geo.scale(s["scale"], s["scale"]))
 
 DRAG_THRESHOLD = 4.0  # pixels before a press becomes a drag
 SNAP_THRESHOLD = 16.0  # pixels within which a dragged connector snaps to another
@@ -86,9 +97,13 @@ def tokenize(record):
     # Compute snap throughout a drag, including the release frame (button is
     # already up there but `released` is true), so the committed NODE_MOVED uses
     # the snapped delta. Gating on button-down alone would miss the commit.
+    #
+    # Resolve REST connectors straight from the model (no drag overlay): the snap
+    # delta is target_rest - source_rest, and Projection's stored connectors are
+    # the *previewed* positions during a drag, which would feed back wrongly.
     snap = None
     if book["press_target"] and moved and (cur["button1_down"] or released):
-        connectors = record["projection"].get("connectors", [])
+        connectors = render.resolve_connectors(_doc_of(record), _camera_of(record))
         snap = _snap_candidate(connectors, book["press_target"],
                                cur["x"] - book["press_x"], cur["y"] - book["press_y"])
 
