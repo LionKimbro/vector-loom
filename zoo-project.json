@@ -1,0 +1,13 @@
+{
+  "zookeep-project-guid": "0624aa3a-a3cc-41ec-bc05-d2990b984b36",
+  "name": "vector-loom",
+  "repo-type": "python-2026-03",
+  "license": "CC0-1.0",
+  "repository": {
+    "name": "vector-loom",
+    "visibility": "public"
+  },
+  "python-package": {
+    "name": "vectorloom"
+  }
+}
