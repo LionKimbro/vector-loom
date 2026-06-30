@@ -13,6 +13,14 @@ A specialized workbench is a new window kind that reuses world/history/discrete
 and adds its own organisms, projection overlays, and command templates.
 """
 
-from .app import main, run_editor
+
+def main(argv=None):
+    from .app import main as _main
+    return _main(argv)
+
+
+def run_editor(doc_path):
+    from .app import run_editor as _run_editor
+    return _run_editor(doc_path)
 
 __all__ = ["main", "run_editor"]
