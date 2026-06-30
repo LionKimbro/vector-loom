@@ -19,9 +19,11 @@ coding agents can author, reason about, and reuse.
    tkinter's native rect/oval items), draws to a `Canvas`, and resolves
    connector world positions for attachment and hit-testing. Works without the
    editor. A headless **PNG exporter** renders documents with no display.
-3. **Editor** — a TkVillage-hosted Canvas window following Lion's tkinter
-   conventions (reducer core, semantic events, projection). Currently supports
-   pan / zoom / fit over a loaded document; direct editing is the next layer.
+3. **Editor** — a full **CIRA**-structured structural editor hosted on
+   TkVillage. Click to select, drag to move, add/delete primitives, edit node
+   JSON in an inspector, save, and undo/redo — with pan/zoom/fit. The
+   architecture is laid out by CIRA subsystem (see below) so specialized
+   workbenches can be built on the same seams.
 
 ## Quickstart
 
@@ -74,11 +76,40 @@ result = render_document(canvas, doc, base_transform)  # -> {items, by_item, con
 bounds = document_bounds(doc)                          # (min_x, min_y, max_x, max_y)
 ```
 
+## Editor architecture (CIRA on TkVillage)
+
+The editor is built on the Coordinated Interactive Runtime Architecture from the
+start. Each module owns one CIRA subsystem; the TkVillage tick *is* the CIRA
+loop. A workbench is added by registering a new window kind that reuses the
+World Model, History, and Discrete vocabulary and supplies its own organisms,
+projection overlays, and node templates.
+
+| CIRA subsystem | Module | Owns |
+|---|---|---|
+| Continuity Engine | `editor/continuity.py` | RAW input, tokenizers (hit-testing), Judge, select/move/pan organisms. Emits semantic events + immediates. |
+| Discrete Engine | `editor/discrete.py` | Pure reducer; selection + desired camera; emits effects (never mutates world). |
+| World Model | `editor/world.py` | Document store + mutations (find/move/add/delete/replace) + atomic save. |
+| History Manager | `editor/history.py` | Checkpoint snapshots; undo/redo state jumps (one per completed edit). |
+| Projection | `editor/projection.py` | Renders document + selection/hover/drag overlays + inspector. Non-authoritative. |
+| Runtime | `editor/app.py` | TkVillage glue: `on_tick` continuity driver + effect-routing reducer adapter. |
+
+Flow: thin Tk callbacks write RAW → `on_tick` runs Continuity (tokenize →
+organisms) which posts semantic events and writes immediates → the reducer
+adapter (Discrete) processes events and routes effects to World/History →
+Projection redraws. During a drag the dragged shape itself follows the cursor
+(Projection shifts its rendered items each tick via a `DRAG_PREVIEW` immediate);
+the model is untouched until the completed drag commits one `NODE_MOVED` (one
+undo step).
+
 ## Status
 
-v1 foundation: format spec, pure runtime renderer, headless PNG export, a
-standalone viewer, an editor scaffold, and tests. Next: direct manipulation in
-the editor (select / move / create / connect), connector snap semantics, and a
-SoftSpec formalization of the format. Text is experimental — tkinter Canvas
-text does not scale/rotate consistently; a stroke-font built from these same
-primitives may replace it.
+Working editor milestone: open a `.vloom.json`, click-select, drag-move,
+add/delete rect/oval/line/polyline/port/group, edit node JSON, save, reload, and
+undo/redo — all on full CIRA. The pure runtime (format, renderer, PNG export,
+viewer) is dependency-free except Pillow.
+
+Dragging moves the real shape live under the cursor. Next: connector **snap**
+organisms (Diagram Workbench), a Glyph Workbench (strokes/baselines/advance
+width), and a SoftSpec formalization of the format. Text is experimental —
+tkinter Canvas text does not scale/rotate consistently; a stroke-font built from
+these same primitives may replace it.

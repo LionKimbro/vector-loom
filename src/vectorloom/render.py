@@ -228,6 +228,44 @@ def document_bounds(doc, base_transform=geo.IDENTITY):
     return (min(xs), min(ys), max(xs), max(ys))
 
 
+def path_world_bounds(doc, path, base_transform=geo.IDENTITY):
+    """Return the (min_x, min_y, max_x, max_y) screen bounds of the node at an
+    editable dotted path (e.g. "root.box" or "root.launch"), or None.
+
+    base_transform is the camera, so the result is in canvas/screen coordinates,
+    ready for drawing selection and drag overlays.
+    """
+    parts = path.split(".")
+    node = doc["root"]
+    if not parts or parts[0] != node["id"]:
+        return None
+    # Accumulate the transform of the node's *parent* frame; _bounds_node applies
+    # the node's own transform internally.
+    m = base_transform
+    for seg in parts[1:]:
+        if node["type"] != S.GROUP:
+            return None
+        m = geo.compose(m, geo.from_trs(**_trs(node)))
+        child = _child_by_id(node, seg)
+        if child is None:
+            return None
+        node = child
+    acc = {"pts": []}
+    _bounds_node(node, m, doc["defs"], acc)
+    if not acc["pts"]:
+        return None
+    xs = [p[0] for p in acc["pts"]]
+    ys = [p[1] for p in acc["pts"]]
+    return (min(xs), min(ys), max(xs), max(ys))
+
+
+def _child_by_id(group, node_id):
+    for child in group["children"]:
+        if child["id"] == node_id:
+            return child
+    return None
+
+
 def _bounds_node(node, world_m, defs, acc):
     kind = node["type"]
     if kind == S.GROUP:

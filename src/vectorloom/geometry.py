@@ -69,6 +69,26 @@ def apply_points(m, points):
     return [(a * x + c * y + e, b * x + d * y + f) for (x, y) in points]
 
 
+def apply_vector(m, vx, vy):
+    """Transform a direction/delta, ignoring translation. Use for moving deltas."""
+    a, b, c, d, _e, _f = m
+    return (a * vx + c * vy, b * vx + d * vy)
+
+
+def invert(m):
+    """Return the inverse transform. Raises ZeroDivisionError on a singular matrix."""
+    a, b, c, d, e, f = m
+    det = a * d - b * c
+    return (
+        d / det,
+        -b / det,
+        -c / det,
+        a / det,
+        (c * f - d * e) / det,
+        (b * e - a * f) / det,
+    )
+
+
 def from_trs(tx, ty, sx, sy, rotate_degrees):
     """Build a transform from translate, scale, then rotate components.
 

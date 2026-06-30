@@ -92,6 +92,12 @@ def normalize_document(raw):
     return doc
 
 
+def normalize_node(raw, styles=None):
+    """Normalize a single raw node into canonical form (public castle gate for
+    the editor, which fabricates new nodes as loose shorthand)."""
+    return _normalize_node(raw, styles or {})
+
+
 def validate_document(doc):
     """Check structural invariants. Raises VloomError on the first problem.
 
@@ -203,7 +209,21 @@ def _normalize_node(raw, styles):
 
 
 def _normalize_transform(raw):
-    """Read translate/scale/rotate components, accepting shorthand keys."""
+    """Read translate/scale/rotate components, accepting shorthand keys.
+
+    Honors an already-canonical `transform` dict so that normalizing a
+    canonical document is idempotent. This is what lets a document round-trip:
+    load, normalize, edit, save (canonical), reload, normalize again, unchanged.
+    """
+    t = raw.get("transform")
+    if isinstance(t, dict):
+        return {
+            "tx": float(t.get("tx", 0.0)),
+            "ty": float(t.get("ty", 0.0)),
+            "sx": float(t.get("sx", 1.0)),
+            "sy": float(t.get("sy", 1.0)),
+            "rotate": float(t.get("rotate", 0.0)),
+        }
     tx = float(raw.get("x", raw.get("tx", 0.0)))
     ty = float(raw.get("y", raw.get("ty", 0.0)))
     scale = raw.get("scale")
