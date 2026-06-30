@@ -1,0 +1,28 @@
+{
+  "vectorloom": "1",
+  "meta": {"title": "Primitives + transforms demo"},
+
+  "styles": {
+    "ink":    {"stroke": "#222222", "width": 2},
+    "accent": {"stroke": "#c62828", "fill": "#ffcdd2", "width": 2},
+    "dashed": {"stroke": "#555555", "width": 1, "dash": "6 4"}
+  },
+
+  "root": {
+    "type": "group",
+    "id": "root",
+    "children": [
+      {"type": "rect",  "id": "box",   "x": 20,  "y": 20, "w": 120, "h": 80, "style": "ink"},
+      {"type": "oval",  "id": "disc",  "x": 170, "y": 20, "w": 100, "h": 80, "style": "accent"},
+      {"type": "line",  "id": "diag",  "x1": 20, "y1": 20, "x2": 140, "y2": 100, "style": "dashed"},
+      {"type": "polyline", "id": "zig", "points": [[20, 140], [60, 110], [100, 140], [140, 110], [180, 140]], "style": "ink"},
+
+      {"type": "group", "id": "spun", "x": 360, "y": 120, "rotate": 30, "scale": 1.4,
+        "children": [
+          {"type": "rect", "id": "r", "x": -40, "y": -25, "w": 80, "h": 50, "style": "accent"},
+          {"type": "port", "id": "p", "x": 40, "y": 0, "role": "output", "direction": "right"}
+        ]
+      }
+    ]
+  }
+}

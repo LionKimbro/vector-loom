@@ -1,0 +1,118 @@
+{
+  "document": {
+    "document-id": "vectorloom.format.v1",
+    "title": "Vector Loom Document Format (v1)",
+    "tags": ["vectorloom", "vector", "graphics", "format", "tkinter", "json", "llmcoding"],
+    "type": {
+      "logical": {"base": "file", "format": "json", "encoding": "utf-8"},
+      "semantic": {"base": "reference"}
+    },
+    "purpose": "Define the v1 JSON data format for 2-D nestable vector structures used by the Vector Loom runtime and editor.",
+    "author": ["Lion Kimbro", "Claude Code"],
+    "created": "2026-06-29",
+    "status": "working-draft"
+  },
+
+  "orientation": {
+    "summary": "A Vector Loom document describes a tree of 2-D vector structures: primitives (line, rect, oval, polyline, text), markers (port), grouping with local coordinate systems (group), and reusable structures placed by reference (defs + instance). The format is a semantic visual-object format, not merely a list of draw commands: structures have identity (ids), local coordinate systems, and named connector points so they can attach to one another and be reasoned about by agents.",
+    "design-stance": [
+      "Structures over drawings: every node has an id and may carry connectors and metadata.",
+      "Nestable: groups establish local coordinate systems; defs are reusable structures placed as instances.",
+      "Consistent transforms: translate, scale, and rotate compose; the runtime flattens to world-space points so rotation and scaling are exact.",
+      "Castle gate: documents may be written loosely; the runtime normalizes them to a canonical interior before use.",
+      "Agent-authorable: the shape is small, explicit, and JSON-friendly so coding agents can write it directly."
+    ],
+    "filename-convention": "*.vloom.json"
+  },
+
+  "document-shape": {
+    "description": "Top-level object. Only `root` is required; everything else has defaults.",
+    "fields": {
+      "vectorloom": "Optional format marker string. Conventionally \"1\".",
+      "version": "Optional format version string. Defaults to \"1\".",
+      "meta": "Optional free-form object of metadata (title, notes, authorship). Not interpreted by the runtime.",
+      "styles": "Optional object mapping style-name -> style object. Referenced by nodes via a string `style`.",
+      "defs": "Optional object mapping def-name -> node. Reusable structures placed elsewhere by `instance` nodes.",
+      "root": "Required node. The top of the visible tree. If a bare primitive is given, the runtime wraps it in a group."
+    }
+  },
+
+  "style-object": {
+    "description": "Concrete drawing properties. Defaults are applied at normalization.",
+    "fields": {
+      "stroke": "Outline/line color (hex string) or null for none. Default \"#222222\".",
+      "fill": "Fill color (hex string) or null for none. Default null.",
+      "width": "Stroke width in document units (number). Default 1. Scales with zoom.",
+      "dash": "Dash pattern as a string like \"6 4\" or a list of integers, or null. Default null."
+    },
+    "resolution-order": "Lowest to highest precedence: named style referenced by a node's string `style`, then an inline `style` object, then shorthand keys placed directly on the node (stroke, fill, width, dash)."
+  },
+
+  "node-types": {
+    "common": {
+      "type": "Required. One of: group, rect, oval, line, polyline, port, instance, text.",
+      "id": "Optional stable identifier. Fabricated if absent. Used for node paths, hit-testing, and editing.",
+      "style": "Optional style name (string) or inline style object. May also use shorthand stroke/fill/width/dash keys directly on the node."
+    },
+    "group": {
+      "purpose": "A container establishing a local coordinate system, holding child nodes and optional connectors.",
+      "fields": {
+        "x, y": "Translation of the local origin (alias tx, ty). Default 0.",
+        "scale": "Uniform scale (number). Or use sx, sy for per-axis. Default 1.",
+        "rotate": "Rotation in degrees, clockwise on screen. Default 0.",
+        "connectors": "Optional object mapping connector-name -> {x, y, direction, role} in local coordinates.",
+        "children": "List of child nodes."
+      }
+    },
+    "rect": {"fields": {"x, y": "Top-left corner.", "w, h": "Width and height."}},
+    "oval": {"fields": {"x, y": "Top-left of bounding box.", "w, h": "Bounding-box width and height."}},
+    "line": {"fields": {"x1, y1": "Start point.", "x2, y2": "End point."}},
+    "polyline": {"fields": {"points": "List of [x, y] pairs.", "closed": "Optional bool; when true the path closes (and fills if a fill is set)."}},
+    "port": {
+      "purpose": "A connector point: a named attachment site drawn as a small marker. Ports make a structure attachable.",
+      "fields": {
+        "x, y": "Position in local coordinates.",
+        "name": "Connector name (defaults to id).",
+        "direction": "Advisory: left, right, up, down, none. Default none.",
+        "role": "Advisory: input, output, bidirectional, anchor. Default anchor. Drives default marker color.",
+        "radius": "Marker radius in document units. Default 4."
+      }
+    },
+    "instance": {
+      "purpose": "Place a reusable structure from `defs` with its own transform and id.",
+      "fields": {
+        "def": "Required def-name to instantiate.",
+        "x, y, scale, sx, sy, rotate": "Placement transform, same as group.",
+        "connectors": "Optional connectors specific to this placement."
+      }
+    },
+    "text": {
+      "status": "experimental",
+      "purpose": "A text label. Flagged experimental because tkinter Canvas text does not scale or rotate with full consistency. A future stroke-font built from these same primitives may replace it.",
+      "fields": {"x, y": "Anchor point.", "text": "String.", "size": "Font size in document units. Default 12.", "anchor": "tk anchor, e.g. nw, center. Default nw."}
+    }
+  },
+
+  "coordinate-system": {
+    "units": "Abstract document units. The runtime fits/zooms; units are not pixels.",
+    "y-axis": "Y grows downward, matching tkinter Canvas.",
+    "transforms": "A group's or instance's transform applies to its subtree. Application order on a point is rotate, then scale, then translate. Child world transform = compose(parent_world, child_local).",
+    "rotation-note": "The runtime renders rects and ovals as polygons of transformed points, so rotation is exact rather than relying on Canvas item rotation (which tkinter lacks)."
+  },
+
+  "runtime-contract": {
+    "normalize": "vectorloom.model.normalize_document(raw) -> canonical document. Raises VloomError on structural problems.",
+    "load": "vectorloom.model.load_file(path) -> canonical document.",
+    "render": "vectorloom.render.render_document(canvas, doc, base_transform=IDENTITY) draws to a tkinter.Canvas and returns {items, by_item, connectors}.",
+    "bounds": "vectorloom.render.document_bounds(doc) -> (min_x, min_y, max_x, max_y) or None.",
+    "export": "vectorloom.export_png.render_image(doc, size) -> Pillow image; export_file(in, out) writes a PNG headlessly.",
+    "node-path": "render_document returns by_item mapping each canvas item id to a dotted node path (e.g. \"root.launch=folder_node.body\") plus resolved connector world positions, for hit-testing and editing."
+  },
+
+  "open-questions": [
+    "Formalize this format as a SoftSpec v3 specification with a data dictionary.",
+    "Decide whether text stays or is replaced by a stroke-font structure for full transform consistency.",
+    "Connector attachment semantics (accepts/emits typing, snap rules) for the editor.",
+    "Path primitive (bezier) for v2."
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "vectorloom": "1",
+  "version": "1",
+  "meta": {
+    "title": "Folder Node demo",
+    "note": "Two reusable folder-node structures placed as instances, joined by a connection. Demonstrates styles, defs/instance reuse, nesting, ports, and connectors."
+  },
+
+  "styles": {
+    "panel":  {"stroke": "#37474f", "fill": "#eceff1", "width": 2},
+    "tab":    {"stroke": "#37474f", "fill": "#cfd8dc", "width": 2},
+    "wire":   {"stroke": "#1565c0", "fill": null, "width": 2},
+    "label":  {"stroke": "#263238"}
+  },
+
+  "defs": {
+    "folder_node": {
+      "type": "group",
+      "id": "folder_node",
+      "connectors": {
+        "input":  {"x": 0,   "y": 45, "direction": "left",  "role": "input"},
+        "output": {"x": 110, "y": 45, "direction": "right", "role": "output"}
+      },
+      "children": [
+        {"type": "rect", "id": "tab",   "x": 0,  "y": 0,  "w": 42,  "h": 16, "style": "tab"},
+        {"type": "rect", "id": "body",  "x": 0,  "y": 12, "w": 110, "h": 66, "style": "panel"},
+        {"type": "text", "id": "label", "x": 10, "y": 38, "text": "folder/", "size": 14, "style": "label"},
+        {"type": "port", "id": "in",    "x": 0,   "y": 45, "role": "input",  "direction": "left"},
+        {"type": "port", "id": "out",   "x": 110, "y": 45, "role": "output", "direction": "right"}
+      ]
+    }
+  },
+
+  "root": {
+    "type": "group",
+    "id": "root",
+    "children": [
+      {"type": "text", "id": "title", "x": 60, "y": 18, "text": "launch pipeline", "size": 18, "stroke": "#102027"},
+
+      {"type": "instance", "id": "launch", "def": "folder_node", "x": 60,  "y": 60},
+      {"type": "instance", "id": "stage",  "def": "folder_node", "x": 320, "y": 60},
+      {"type": "instance", "id": "done",   "def": "folder_node", "x": 580, "y": 60},
+
+      {"type": "polyline", "id": "wire_a", "points": [[170, 105], [245, 105], [245, 105], [320, 105]], "style": "wire"},
+      {"type": "polyline", "id": "wire_b", "points": [[430, 105], [505, 105], [505, 105], [580, 105]], "style": "wire"}
+    ]
+  }
+}
