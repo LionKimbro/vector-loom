@@ -13,7 +13,6 @@ authors = [{name = "Lion Kimbro"}]
 dependencies = []
 
 [project.scripts]
-vectorloom-view = "vectorloom.viewer:main"
 vectorloom-viewer = "vectorloom.viewer:main"
 vectorloom-editor = "vectorloom.editor:main"
 
