@@ -153,20 +153,6 @@ def on_tick(_rt, record):
 # registration + entrypoint
 # --------------------------------------------------------------------------
 
-def on_window_destroyed(rt, record):
-    """End the TkVillage session when the last editor window closes.
-
-    TkVillage destroys the Toplevel but leaves the hidden root's mainloop
-    running, so without this the process would never exit. shutdown() is
-    scheduled via after(0) rather than called inline because shutdown() itself
-    iterates and destroys windows; running it now would re-enter destroy_window
-    for the window currently being destroyed.
-    """
-    remaining = [wid for wid in rt.windows if wid != record["window_id"]]
-    if not remaining and rt.g["root"] is not None:
-        rt.g["root"].after(0, village.shutdown)
-
-
 def register():
     village.register_window_kind(
         CANVAS_WINDOW,
@@ -177,15 +163,26 @@ def register():
         reduce_event=reduce_event,
         project=projection.project,
         on_tick=on_tick,
-        on_destroy=on_window_destroyed,
     )
 
 
 def run_editor(doc_path):
-    """Load a document and open the editor on the TkVillage runtime."""
+    """Load a document and open the editor on the TkVillage runtime.
+
+    The canvas window owns program lifetime: TkVillage's on-window-close policy
+    ends the runtime at tick-end once no canvas windows remain, so closing the
+    editor window exits the app.
+    """
     world.load(doc_path)
     history.init(doc_path, world.get(doc_path), None)
-    village.create_app("vectorloom", ".vectorloom", tick_interval_ms=33)
+    village.declare_app({
+        "name": "vectorloom",
+        "project-dir-name": ".vectorloom",
+        "tick-interval-ms": 33,
+        "shutdown-policy": "on-window-close",
+        "shutdown-window-kind": CANVAS_WINDOW,
+        "on-shutdown": None,
+    })
     register()
     village.summon_window(CANVAS_WINDOW, key=doc_path, payload={"doc_path": doc_path})
     village.run()

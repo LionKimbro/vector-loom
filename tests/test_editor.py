@@ -233,7 +233,9 @@ def test_cira_loop_select_and_drag(tmp_path):
     try:
         world.load(doc_path)
         history.init(doc_path, world.get(doc_path), None)
-        village.create_app("vl-test", ".vl-test", test_mode=True)
+        village.declare_app({"name": "vl-test", "project-dir-name": ".vl-test",
+                             "test-mode": True, "shutdown-policy": "explicit",
+                             "shutdown-window-kind": None, "on-shutdown": None})
     except Exception:
         pytest.skip("Tk not available")
 
@@ -304,7 +306,9 @@ def test_connector_snap_aligns_on_commit(tmp_path):
     try:
         world.load(doc_path)
         history.init(doc_path, world.get(doc_path), None)
-        village.create_app("vl-snap", ".vl-snap", test_mode=True)
+        village.declare_app({"name": "vl-snap", "project-dir-name": ".vl-snap",
+                             "test-mode": True, "shutdown-policy": "explicit",
+                             "shutdown-window-kind": None, "on-shutdown": None})
     except Exception:
         pytest.skip("Tk not available")
 
