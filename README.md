@@ -91,7 +91,7 @@ projection overlays, and node templates.
 | World Model | `editor/world.py` | Document store + mutations (find/move/add/delete/replace) + atomic save. |
 | History Manager | `editor/history.py` | Checkpoint snapshots; undo/redo state jumps (one per completed edit). |
 | Projection | `editor/projection.py` | Renders document + selection/hover/drag overlays + inspector. Non-authoritative. |
-| Runtime | `editor/app.py` | TkVillage glue: `on_tick` continuity driver + effect-routing reducer adapter. |
+| Runtime | `editor/app.py` | TkVillage glue: `declare_app` (on-window-close shutdown policy — closing the canvas window ends the app), the `on_tick` continuity driver, and the effect-routing reducer adapter. |
 
 Flow: thin Tk callbacks write RAW → `on_tick` runs Continuity (tokenize →
 organisms) which posts semantic events and writes immediates → the reducer
