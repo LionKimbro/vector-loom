@@ -45,12 +45,14 @@ def reduce(state, event, doc):
             new["handle_mode"] = E.MODE_SELECT
             new["status"] = "Deselected"
         elif path == state["selection"]:
-            # Re-clicking the selected node cycles its handle mode.
-            new["handle_mode"] = E.HANDLE_MODE_CYCLE[state["handle_mode"]]
+            # Re-clicking the selected node toggles RESIZE <-> ROTATE handles.
+            new["handle_mode"] = E.HANDLE_MODE_CYCLE.get(state["handle_mode"], E.MODE_ROTATE)
             new["status"] = f"{new['handle_mode'].title()} handles"
         else:
+            # Selecting a node lands directly in RESIZE (you can still drag the
+            # body to move it with handles attached).
             new["selection"] = path
-            new["handle_mode"] = E.MODE_SELECT
+            new["handle_mode"] = E.MODE_RESIZE
             new["status"] = f"Selected {path}"
         new["status_kind"] = "info"
         return new, []

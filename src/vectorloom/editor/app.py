@@ -84,7 +84,7 @@ def _route_world_mutate(effect, state, doc):
         new_path = world.add_child(doc, effect["parent"], effect["node"])
         out = dict(state)
         out["selection"] = new_path
-        out["handle_mode"] = E.MODE_SELECT
+        out["handle_mode"] = E.MODE_RESIZE
         return out
     if op == E.OP_DELETE:
         world.delete_node(doc, effect["path"])
@@ -137,11 +137,13 @@ def on_tick(_rt, record):
     hover_target = next((i["path"] for i in record["immediates"] if i["type"] == E.HOVER), None)
     hover_changed = hover_target != record["last_hover"]
     record["last_hover"] = hover_target
-    has_drag = any(i["type"] == E.DRAG_PREVIEW for i in record["immediates"])
+    # Any manipulation preview (move, resize, rotate) must drive a per-frame
+    # reprojection so the overlay updates live, not only on commit.
+    has_preview = any(i["type"] in (E.DRAG_PREVIEW, E.TRANSFORM_PREVIEW) for i in record["immediates"])
 
     continuity.promote_raw(record)
 
-    need_projection = bool(out_events) or has_drag or hover_changed or record["state"]["fit_pending"]
+    need_projection = bool(out_events) or has_preview or hover_changed or record["state"]["fit_pending"]
     if need_projection:
         return [{"type": "REQUEST_PROJECT", "window_id": record["window_id"]}]
     return None

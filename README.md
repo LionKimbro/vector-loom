@@ -126,6 +126,22 @@ one undo step. Snap is a
 tokenizer (spatial candidate computation) consulted by the move organism — the
 core of the Diagram Workbench.
 
+**Resize and rotate** work on the selection via handles, previewed live each
+frame. Selecting a node lands in RESIZE (you can still drag the body to move it
+with handles attached); re-clicking it toggles `RESIZE ⇄ ROTATE` (the two stay
+strictly separate — never mixed). Modifiers (each a RAW fact read from the
+pointer event) refine the manipulation:
+
+- **Control** + resize — lock the aspect ratio.
+- **Shift** + resize — snap each scale factor to 20% steps (5 steps doubles it).
+- **Alt** + resize — scale about the center instead of the opposite corner.
+- **Shift** + rotate — snap rotation to 15° increments. Every node carries its
+own `transform`, so move/resize/rotate all commit by writing that one transform:
+the manipulation is previewed as an overlay-transform intercept, then on release
+the screen-space transform is conjugated into the node's local frame and
+decomposed back to `{tx,ty,sx,sy,rotate}`. Because rects/ovals are flattened to
+transformed points, rotating a primitive works for free.
+
 Next: selecting/deleting/restyling connections, multi-select, a Glyph Workbench
 (strokes/baselines/advance width), and a SoftSpec formalization of the format.
 Text is experimental — tkinter Canvas text does not scale/rotate consistently; a

@@ -114,17 +114,19 @@ def test_add_connection_dedupes_unordered():
 def test_handle_mode_cycles_on_reclick():
     from vectorloom.editor import discrete, events as E
     st = discrete.make_initial_state(None, payload={"doc_path": "x"})
+    # First select lands directly in RESIZE.
     st, _ = discrete.reduce(st, {"type": E.SET_SELECTION, "path": "root.box"}, None)
-    assert st["selection"] == "root.box" and st["handle_mode"] == E.MODE_SELECT
-    st, _ = discrete.reduce(st, {"type": E.SET_SELECTION, "path": "root.box"}, None)
-    assert st["handle_mode"] == E.MODE_RESIZE
+    assert st["selection"] == "root.box" and st["handle_mode"] == E.MODE_RESIZE
     st, _ = discrete.reduce(st, {"type": E.SET_SELECTION, "path": "root.box"}, None)
     assert st["handle_mode"] == E.MODE_ROTATE
     st, _ = discrete.reduce(st, {"type": E.SET_SELECTION, "path": "root.box"}, None)
-    assert st["handle_mode"] == E.MODE_RESIZE  # cycles back, never mixes
-    # Selecting a different node resets to plain select.
+    assert st["handle_mode"] == E.MODE_RESIZE  # toggles back, never mixes
+    # Selecting a different node lands in RESIZE again.
     st, _ = discrete.reduce(st, {"type": E.SET_SELECTION, "path": "root.other"}, None)
-    assert st["selection"] == "root.other" and st["handle_mode"] == E.MODE_SELECT
+    assert st["selection"] == "root.other" and st["handle_mode"] == E.MODE_RESIZE
+    # Deselecting clears to the no-selection sentinel.
+    st, _ = discrete.reduce(st, {"type": E.SET_SELECTION, "path": None}, None)
+    assert st["selection"] is None and st["handle_mode"] == E.MODE_SELECT
 
 
 def test_apply_screen_transform_bakes_scale_and_rotate():
@@ -147,6 +149,59 @@ def test_apply_screen_transform_bakes_scale_and_rotate():
     t = world.find_node(doc, "root.box")["transform"]
     assert abs(t["rotate"] - 90.0) < 1e-6
     assert abs(t["sx"] - 1.0) < 1e-9 and abs(t["sy"] - 1.0) < 1e-9
+
+
+def test_resize_aspect_lock_with_ctrl():
+    from vectorloom import geometry as geo
+    from vectorloom.editor import continuity
+    # An SE corner handle: 100px wide, 50px tall box anchored at its NW corner.
+    handle = {"x": 200, "y": 150, "ax": 100, "ay": 100, "sx_on": True, "sy_on": True}
+    base = {"press_x": 200, "press_y": 150, "sx": 260, "sy": 160,  # drag +60, +10 (non-proportional)
+            "shift": False, "alt": False}
+
+    free = continuity._resize_transform(handle, {**base, "ctrl": False})
+    d_free = geo.decompose(free)
+    assert abs(d_free["sx"] - 1.6) < 1e-9 and abs(d_free["sy"] - 1.2) < 1e-9  # independent axes
+
+    locked = continuity._resize_transform(handle, {**base, "ctrl": True})
+    d_lock = geo.decompose(locked)
+    assert abs(d_lock["sx"] - d_lock["sy"]) < 1e-9  # aspect locked
+    assert abs(d_lock["sx"] - 1.6) < 1e-9           # to the dominant axis
+
+
+def test_resize_alt_pivots_about_center():
+    from vectorloom import geometry as geo
+    from vectorloom.editor import continuity
+    handle = {"x": 200, "y": 150, "ax": 100, "ay": 100, "sx_on": True, "sy_on": True}
+    d = {"press_x": 200, "press_y": 150, "sx": 250, "sy": 175,
+         "ctrl": False, "shift": False, "alt": True}
+    # Pivot is the center (150,125): the corner moves from 50px out to 100px out
+    # on each axis -> 2x, vs 1.5x if it pivoted about the opposite corner.
+    dec = geo.decompose(continuity._resize_transform(handle, d))
+    assert abs(dec["sx"] - 2.0) < 1e-9 and abs(dec["sy"] - 2.0) < 1e-9
+
+
+def test_resize_shift_snaps_to_20_percent():
+    from vectorloom import geometry as geo
+    from vectorloom.editor import continuity
+    # Edge handle scales one axis; drag gives fx=1.55 which snaps to 1.6.
+    handle = {"x": 200, "y": 125, "ax": 100, "ay": 125, "sx_on": True, "sy_on": False}
+    d = {"press_x": 200, "press_y": 125, "sx": 255, "sy": 125,
+         "ctrl": False, "shift": True, "alt": False}
+    dec = geo.decompose(continuity._resize_transform(handle, d))
+    assert abs(dec["sx"] - 1.6) < 1e-9
+
+
+def test_rotate_shift_snaps_to_15_degrees():
+    from vectorloom import geometry as geo
+    from vectorloom.editor import continuity
+    import math
+    o = {"cx": 0.0, "cy": 0.0, "a0": 0.0}
+    twenty = math.radians(20)
+    d = {"sx": math.cos(twenty) * 10, "sy": math.sin(twenty) * 10, "shift": True}
+    assert abs(geo.decompose(continuity._rotate_transform(o, d))["rotate"] - 15.0) < 1e-6
+    d["shift"] = False
+    assert abs(geo.decompose(continuity._rotate_transform(o, d))["rotate"] - 20.0) < 1e-6
 
 
 def test_history_undo_redo():

@@ -19,11 +19,12 @@ UNDO = "UNDO"
 REDO = "REDO"
 
 # --- handle modes (Discrete-owned per-selection focus) ---
-# Re-clicking the selected node cycles SELECT -> RESIZE -> ROTATE -> RESIZE ...
+# Selecting a node lands in RESIZE; re-clicking it toggles RESIZE <-> ROTATE.
+# MODE_SELECT is the no-selection sentinel.
 MODE_SELECT = "SELECT"
 MODE_RESIZE = "RESIZE"
 MODE_ROTATE = "ROTATE"
-HANDLE_MODE_CYCLE = {MODE_SELECT: MODE_RESIZE, MODE_RESIZE: MODE_ROTATE, MODE_ROTATE: MODE_RESIZE}
+HANDLE_MODE_CYCLE = {MODE_RESIZE: MODE_ROTATE, MODE_ROTATE: MODE_RESIZE}
 
 # camera events (not undoable; emit no checkpoint)
 PAN_BY = "PAN_BY"

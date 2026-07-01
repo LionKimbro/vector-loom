@@ -40,7 +40,8 @@ SNAP_THRESHOLD = 16.0  # pixels within which a dragged connector snaps to anothe
 
 def init_continuity(record):
     """Install RAW state, tokenizer bookkeeping, Judge, and organisms."""
-    blank = {"x": 0, "y": 0, "button1_down": False, "inside": False}
+    blank = {"x": 0, "y": 0, "button1_down": False, "inside": False,
+             "ctrl": False, "shift": False, "alt": False}
     record["raw"] = {"current": dict(blank), "previous": dict(blank)}
     record["continuity"] = {"press_x": None, "press_y": None, "press_target": None, "press_handle": None}
     record["judge"] = {}                       # resource -> owning organism name
@@ -61,14 +62,25 @@ def bind_raw(record):
     canvas = record["widgets"]["canvas"]
     cur = record["raw"]["current"]
 
+    # Tk reports modifier state on every pointer event, so a drag carries the
+    # live modifier state without separate key bindings. Masks: Shift 0x0001,
+    # Control 0x0004, Alt 0x0008 (X11 Mod1) or 0x20000 (Windows).
+    def read_mods(e):
+        cur["ctrl"] = bool(e.state & 0x0004)
+        cur["shift"] = bool(e.state & 0x0001)
+        cur["alt"] = bool(e.state & (0x0008 | 0x20000))
+
     def on_motion(e):
         cur["x"], cur["y"], cur["inside"] = e.x, e.y, True
+        read_mods(e)
 
     def on_press(e):
         cur["x"], cur["y"], cur["button1_down"] = e.x, e.y, True
+        read_mods(e)
 
     def on_release(e):
         cur["x"], cur["y"], cur["button1_down"] = e.x, e.y, False
+        read_mods(e)
 
     canvas.bind("<Motion>", on_motion)
     canvas.bind("<ButtonPress-1>", on_press)
@@ -118,6 +130,9 @@ def tokenize(record):
         "pressed": pressed,
         "released": released,
         "button_down": cur["button1_down"],
+        "ctrl": cur["ctrl"],
+        "shift": cur["shift"],
+        "alt": cur["alt"],
         "target": target,
         "handle_target": handle_target,
         "press_target": book["press_target"],
@@ -228,18 +243,47 @@ def _resize(o, d, judge, out, gesture, record, disc):
         o["state"] = "IDLE"
 
 
+RESIZE_STEP = 0.2   # Shift snaps each scale factor to this increment
+ROTATE_STEP = 15.0  # Shift snaps rotation to this many degrees
+
+
 def _resize_transform(handle, d):
-    """Screen-space scale-about-anchor as the dragged corner/edge follows the
-    cursor. The opposite corner/edge (the handle's anchor) stays fixed."""
-    ax, ay = handle["ax"], handle["ay"]
+    """Screen-space scale-about-pivot as the dragged corner/edge follows the
+    cursor. Modifiers:
+      - Alt:     pivot about the bounds center, so the box grows symmetrically,
+                 instead of about the opposite corner/edge.
+      - Control: lock aspect ratio (both axes scale by the dominant factor).
+      - Shift:   snap each scale factor to RESIZE_STEP (20%) increments.
+    """
+    hx, hy = handle["x"], handle["y"]
+    if d["alt"]:
+        px, py = (hx + handle["ax"]) / 2.0, (hy + handle["ay"]) / 2.0  # bounds center
+    else:
+        px, py = handle["ax"], handle["ay"]                            # opposite corner/edge
     sdx = d["sx"] - d["press_x"]
     sdy = d["sy"] - d["press_y"]
     fx = fy = 1.0
-    if handle["sx_on"] and (handle["x"] - ax) != 0:
-        fx = (handle["x"] + sdx - ax) / (handle["x"] - ax)
-    if handle["sy_on"] and (handle["y"] - ay) != 0:
-        fy = (handle["y"] + sdy - ay) / (handle["y"] - ay)
-    return geo.compose(geo.translate(ax, ay), geo.compose(geo.scale(fx, fy), geo.translate(-ax, -ay)))
+    if handle["sx_on"] and (hx - px) != 0:
+        fx = (hx + sdx - px) / (hx - px)
+    if handle["sy_on"] and (hy - py) != 0:
+        fy = (hy + sdy - py) / (hy - py)
+    if d["ctrl"]:
+        if handle["sx_on"] and handle["sy_on"]:
+            f = fx if abs(fx - 1.0) >= abs(fy - 1.0) else fy  # corner: dominant axis
+        else:
+            f = fx if handle["sx_on"] else fy                  # edge: its one axis
+        fx = fy = f
+    if d["shift"]:
+        fx, fy = _snap_step(fx, RESIZE_STEP), _snap_step(fy, RESIZE_STEP)
+    return geo.compose(geo.translate(px, py), geo.compose(geo.scale(fx, fy), geo.translate(-px, -py)))
+
+
+def _snap_step(value, step):
+    """Snap to the nearest multiple of step, keeping at least one step of size."""
+    snapped = round(value / step) * step
+    if abs(snapped) < step:
+        return step if value >= 0 else -step
+    return snapped
 
 
 def _rotate(o, d, judge, out, gesture, record, disc):
@@ -267,9 +311,11 @@ def _rotate(o, d, judge, out, gesture, record, disc):
 
 def _rotate_transform(o, d):
     """Screen-space rotation about the selection center by the angle the cursor
-    has swept since the press."""
+    has swept since the press. Holding Shift snaps to ROTATE_STEP (15deg)."""
     a1 = math.atan2(d["sy"] - o["cy"], d["sx"] - o["cx"])
     degrees = math.degrees(a1 - o["a0"])
+    if d["shift"]:
+        degrees = round(degrees / ROTATE_STEP) * ROTATE_STEP
     cx, cy = o["cx"], o["cy"]
     return geo.compose(geo.translate(cx, cy), geo.compose(geo.rotate(degrees), geo.translate(-cx, -cy)))
 

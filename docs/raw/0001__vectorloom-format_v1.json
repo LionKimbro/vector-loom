@@ -64,7 +64,8 @@
     "common": {
       "type": "Required. One of: group, rect, oval, line, polyline, port, instance, text.",
       "id": "Optional stable identifier. Fabricated if absent. Used for node paths, hit-testing, and editing.",
-      "style": "Optional style name (string) or inline style object. May also use shorthand stroke/fill/width/dash keys directly on the node."
+      "style": "Optional style name (string) or inline style object. May also use shorthand stroke/fill/width/dash keys directly on the node.",
+      "transform": "Optional {tx,ty,sx,sy,rotate}. Every node carries one (default identity), so move/resize/rotate are uniform. For group/instance, the x/y/scale shorthand also seeds it; for primitives x/y are geometry, so a primitive is transformed only via an explicit transform. The node's geometry/children are drawn through this transform, composed under its ancestors."
     },
     "group": {
       "purpose": "A container establishing a local coordinate system, holding child nodes and optional connectors.",
