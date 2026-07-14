@@ -42,7 +42,7 @@ CANVAS_WINDOW = "canvas"
 # Discrete adapter + effect routing (the Runtime's job)
 # --------------------------------------------------------------------------
 
-def reduce_event(_rt, state, event):
+def reduce_event(state, event):
     doc = world.get(state["doc_path"])
     new_state, effects = discrete.reduce(state, event, doc)
     for effect in effects:
@@ -126,7 +126,7 @@ def _status(state, message, kind):
 # Continuity driver (runs each tick before projection)
 # --------------------------------------------------------------------------
 
-def on_tick(_rt, record):
+def on_tick(record):
     record["immediates"] = []
     derived = continuity.tokenize(record)
     out_events = []
@@ -154,16 +154,16 @@ def on_tick(_rt, record):
 # --------------------------------------------------------------------------
 
 def register():
-    village.register_window_kind(
-        CANVAS_WINDOW,
-        title="Vector Loom",
-        multiplicity="per-key",
-        create=projection.create,
-        make_initial_state=discrete.make_initial_state,
-        reduce_event=reduce_event,
-        project=projection.project,
-        on_tick=on_tick,
-    )
+    village.register_window_kind({
+        "window-kind": CANVAS_WINDOW,
+        "title": "Vector Loom",
+        "multiplicity": "per-key",
+        "create": projection.create,
+        "make-initial-state": discrete.make_initial_state,
+        "reduce-event": reduce_event,
+        "project": projection.project,
+        "on-tick": on_tick,
+    })
 
 
 def run_editor(doc_path):

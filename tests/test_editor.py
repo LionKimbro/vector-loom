@@ -113,7 +113,7 @@ def test_add_connection_dedupes_unordered():
 
 def test_handle_mode_cycles_on_reclick():
     from vectorloom.editor import discrete, events as E
-    st = discrete.make_initial_state(None, payload={"doc_path": "x"})
+    st = discrete.make_initial_state(payload={"doc_path": "x"})
     # First select lands directly in RESIZE.
     st, _ = discrete.reduce(st, {"type": E.SET_SELECTION, "path": "root.box"}, None)
     assert st["selection"] == "root.box" and st["handle_mode"] == E.MODE_RESIZE

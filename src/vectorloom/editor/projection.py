@@ -24,7 +24,7 @@ from . import world
 _STATUS_COLORS = {"ok": "#2e7d32", "error": "#c62828", "info": "#222222", "phase": "#1565c0"}
 
 
-def create(_rt, record):
+def create(record):
     """Build the editor shell: toolbar, canvas, inspector, status bar."""
     top = record["toplevel"]
     top.title("Vector Loom Editor")
@@ -61,7 +61,7 @@ def create(_rt, record):
     _bind_camera_and_keys(top, canvas, post)
 
 
-def project(_rt, record):
+def project(record):
     """Render the document plus selection/hover/drag overlays and the inspector."""
     state = record["state"]
     canvas = record["widgets"]["canvas"]

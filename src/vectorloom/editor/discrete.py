@@ -19,7 +19,7 @@ from .. import symbols as S
 from . import events as E
 
 
-def make_initial_state(_rt, key=None, payload=None):
+def make_initial_state(key=None, payload=None):
     """Compact semantic state. The document itself lives in the World Model."""
     return {
         "doc_path": payload["doc_path"],

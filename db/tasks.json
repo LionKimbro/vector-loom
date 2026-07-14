@@ -1,0 +1,9 @@
+[
+    {"type": "task",
+     "id": "drop-record-callback-arg",
+     "status": "planned-deferred",
+     "title": "Drop the `record` callback argument (move to ambient current-record model)",
+     "description": "TkVillage window callbacks currently still receive `record`. We intend to remove it so callbacks obtain the current active window record ambiently (rt.g[\"record\"] / village.current_record()), matching Lion's style: contextual state lives in globals, pass only what varies. `rt` has ALREADY been dropped from callback signatures; `record` is still passed for now. Deferring the record drop because it is too involved for the current period and it depends on TkVillage-side work (current-record model, single-active-window invariant, input-port/binding API). Do the TkVillage changes first, then conform Vector Loom. Full considerations, ethos, and sequencing in docs/raw/0002__how-to-drop-record.md.",
+     "depends-on": ["tkvillage: current-record model + input-port helpers"],
+     "created": "2026-07-01"}
+]
