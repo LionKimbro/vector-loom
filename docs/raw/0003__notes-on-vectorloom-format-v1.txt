@@ -1,0 +1,97 @@
+date: 2026-08-05
+title: Notes on vectorloom.format.v1
+
+== Orientation ==
+date: 2026-08-05
+
+A Vector Loom Document:
+  - describes tree of 2-D vector structures:
+    - primitives:
+      - line
+      - rect
+      - oval
+      - polyline
+      - text
+    - markers
+      - port (connector point)
+    - groupings w/ local coordinate system
+      - "group"
+    - reusable named structures
+      - def/instance
+  - semantic visual-object format
+    - defs have identity, local coordinate systems
+    - named connector points for attachment
+
+Design Stance:
+  - Structures > Drawings -- ids, connectors, metadata
+  - Nestable -- incl rotation, scaling, positioning
+  - filename: (xyz).vloom.json
+
+== Document Shape ==
+date: 2026-08-05
+
+  - description -- top-level object; only root is req'd
+    - vectorloom: 1
+    - version: 1
+    - meta: {{"title": ..., "notes": ...., "authorship": ...}
+    - styles: {"style-name": {style object}, ...}
+    - defs: {"def-name": {node object}, ...}
+    - root: <the top of the visible tree> or a bare primitive
+       I HAVE QUESTIONS ABOUT HOW THIS WORK, AND WHY REQ'D.
+    - connections: [<optional list of connections joining two connectors>, ...]
+      - rendered as wires
+
+== Connection Object ==
+date: 2026-08-05
+
+  - "a durable relation between two connectors"
+    - Endpoints ref: node path + connector name
+      - resolves to world position at render time
+  - fields:
+    - id (optional stable identifier)
+    - from: <endpoint object {node, name}>  -- editable node path and the connector//port name on it
+    - to: <endpoint object {node, name}>  -- the other end
+    - style: optional style or insline style object; defaults to blue wire
+  - editor behavior:
+    - dragging a port-bearing node so a connector lands within snap range of a compatible connector (output<->input, anchor<->anchor (?)) snaps it into alignment and records a connection
+      I HAVE A QUESTION -- WHY SNAP ANCHOR<->ANCHOR..?
+      ANOTHER QUESTION: are these for snapping objects together,
+                        or for WIRING objects together?
+    - snap-move and connection commit as a single undoable action.
+
+== Node Types ==
+date: 2026-08-05
+
+  - common
+    - type: line/rect/oval/polyline/text/port/group/instance
+    - id: optional stable identifier (node paths, hit-testing, editing)
+    - style: optional stable name (str) or inline style obejct
+      - may also use shorthand stroke/fill/width/dash keys directly on the node
+    - transform (tx, ty, sx, sy, rotate)
+      - node's geometry/children are drawn through this transform
+      - transform is composed under its ancestors
+  - group
+    - purpose: a container establishing a local coord system, holding child nodes, and optional connectors
+    - fields:
+      - x, y: translation of the local origin (alias tx, ty); default: 0
+      - scale: uniform scale (number) or (sx, sy) for per-axis; default: 1
+      - rotate: rotation in degrees, clockwise; default: 0
+      - connectors: optional object mapping {"connector-name": {x, y, direction, role} in local coordinates
+      - children: list of child nodes
+  - rect: {x: y: w: h:}
+  - oval: {x: y: w: h:}
+  - line: {x1: y1: x2: y2:}
+  - polyline: {points: [[x,y], [x,y], ...]], closed: optional bool; when true the path closes and fills if a fill is set}
+  - port
+    - purpose: connector point: a named attachment site drawn as a small marker; port makes a structure attachable
+    - 
+
+...
+
+== Open Questions / TO-DO ==
+date: 2026-08-05
+
+* formalize format into a SoftSpec v3
+* Keep text?  Or go to a stroke-font structure?  -- [clearly, NEED text.]
+* Connector attachment semantics, ...
+* Bezier path primitive for v2.  <- yes, I will really want this.
