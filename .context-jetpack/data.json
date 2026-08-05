@@ -1,5 +1,5 @@
 {
-  "purpose": "\"Vector Loom\"  -- 2d canvas tkinter structure vector graphic graphics.  a data format for vector structures, a runtime for using them, and a editor for such structures.  I frequently love using visual information, and this means I need to be able to author such structures and help agentic coding AIs make use of them.\n",
+  "purpose": "\"Vector Loom\"  -- a 2d canvas tkinter structure vector graphic graphics.  Eventually, it will be (a) a data format for vector structures, (b) a runtime for using them, and (c) a editor (or collection of editors) for such structures.  But presently, we're starting with just a small core to develop the concept -- implementing a subset of a data format to come, and a small runtime for testing these concepts.",
   "options": {
     "encourage-questions": false,
     "request-ack": true
@@ -11,7 +11,7 @@
       "reason": "Read this for high-level orientation to Lion's recurring concepts, systems, and vocabulary."
     },
     "general-background-abbreviated": {
-      "selected": true,
+      "selected": false,
       "designation": "required",
       "reason": "Read this for an abbreviated high-level orientation to Lion's recurring concepts, systems, and vocabulary."
     },
@@ -21,9 +21,44 @@
       "reason": "Read this for a brief overview of how Lion's projects and repositories are organized."
     },
     "programming-guidelines": {
-      "selected": true,
+      "selected": false,
       "designation": "required",
       "reason": "These are the programming guidelines that you shall implement the program with."
+    },
+    "style-card-globals": {
+      "selected": true,
+      "designation": "required",
+      "reason": "Program with this philosophy of Globals."
+    },
+    "style-card-function-names": {
+      "selected": true,
+      "designation": "required",
+      "reason": "When creating functions, name them like this."
+    },
+    "style-card-function-args": {
+      "selected": true,
+      "designation": "required",
+      "reason": "When creating functions, create their parameter lists like this."
+    },
+    "style-card-machines": {
+      "selected": true,
+      "designation": "required",
+      "reason": "Program like you are making little Machines, not abstractions."
+    },
+    "style-card-registers": {
+      "selected": true,
+      "designation": "required",
+      "reason": "Here is how to use registers in the machines you write."
+    },
+    "style-card-python": {
+      "selected": true,
+      "designation": "required",
+      "reason": "These are the broad things to hold in mind when writing Python programs for Lion."
+    },
+    "bad-method": {
+      "selected": true,
+      "designation": "required",
+      "reason": "The development process we will use to meet our goal."
     },
     "json-document-writing": {
       "selected": false,
@@ -35,18 +70,13 @@
       "designation": "recommended",
       "reason": "A condensed version of the JSON documentation-writing guide; read this for the essentials when the full guide is more than you need."
     },
-    "softspec": {
-      "selected": false,
-      "designation": "recommended",
-      "reason": "Read this when specifying data structures in JSON documents; SoftSpec is the preferred approach."
-    },
     "softspec-v3": {
       "selected": true,
       "designation": "recommended",
       "reason": "Read this when specifying data structures in JSON documents; SoftSpec is the preferred approach. (v3 fixes minor errors in v2, includes 'json_clean', and describes how to incorporate data-dictionary entries.)"
     },
     "lionscliapp": {
-      "selected": true,
+      "selected": false,
       "designation": "required",
       "reason": "The program you are implementing will be built with the lionscliapp framework. Read this so that you know how to use it."
     },
@@ -70,18 +100,23 @@
       "designation": "required",
       "reason": "When you combine tkintertester with lionscliapp, follow this integration pattern so the CLI lifecycle and Tk test lifecycle stay correctly separated."
     },
+    "tkmachina": {
+      "selected": false,
+      "designation": "required",
+      "reason": "Explains how to use tkMachina, a Little Castles system for making tkinter applications"
+    },
     "tkvillage-manual-v1": {
-      "selected": true,
+      "selected": false,
       "designation": "required",
       "reason": "Explains how to use TkVillage, a lightweight procedural Tkinter host runtime."
     },
     "tkvillage-api-v1": {
-      "selected": true,
+      "selected": false,
       "designation": "required",
       "reason": "Provide a full user-facing API reference for the current TkVillage kernel."
     },
     "tkvillage-data-dictionary-v1": {
-      "selected": true,
+      "selected": false,
       "designation": "recommended",
       "reason": "Document the runtime data owned by src/tkvillage/app.py using SoftSpec v3, including structural schemas and data-dictionary annotations for runtime ownership, lifecycle, reset behavior, and serialization boundaries."
     },
@@ -116,7 +151,7 @@
       "reason": "The program will use the Reducer-Core Architecture. Read this to understand the architecture and its specific terms of use."
     },
     "cira": {
-      "selected": true,
+      "selected": false,
       "designation": "required",
       "reason": "The program is likely to use, or may be required to use, the Coordinated Interactive Runtime Architecture (CIRA). Read this so that you know how to implement it."
     }
