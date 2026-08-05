@@ -14,3 +14,7 @@ venv/
 .pycard/
 .zookeep/
 zookeeper-report.json
+
+# Emacs backup and autosave files
+*~
+\#*\#
