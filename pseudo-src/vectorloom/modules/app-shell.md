@@ -8,7 +8,8 @@
 
 - Program setup orchestration.
 - Loading and applying program configuration (if any.)
-- Orchestrating the start of the timer loop.
+- Making the initial call to `timer.start_timer()` as part of application
+  composition.
 - Kicking off the first window's creation.
 - Entering the Tk event loop after application composition is complete.
 
@@ -19,7 +20,7 @@
 ## CALLS
 
 - `tk_runtime.create_and_withdraw_root()`.
-- `tk_runtime.start_periodic_timer()`
+- `timer.start_timer()`.
 - `canvas_host_window.create_canvas_host_window()`.
 
 ## MAY SAFELY ASSUME
@@ -36,7 +37,7 @@
 
 - Visible application windows.
 - Event-handler registration.
-- Timer scheduling.
+- The implementation of timer scheduling or cancellation.
 - Periodic timer response.
 
 
@@ -45,7 +46,7 @@
 ```python
 function main():
     tk_runtime.create_and_withdraw_root()
-    tk_runtime.start_periodic_timer()
+    timer.start_timer()
     app_specific_setup()
     tk_runtime.g["root"].mainloop()
 

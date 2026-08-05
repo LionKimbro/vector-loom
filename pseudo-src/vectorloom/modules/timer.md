@@ -1,15 +1,12 @@
 # Module — Periodic Timer
 
-## Source Evidence
-
-`src/demo/app.py` — `schedule_periodic_tick()` and `handle_periodic_tick()`.
-
 ## Render Target
 
-`src/bad_demo/timer.py`
+`timer.py`
 
 ## OWNS
 
+- The `start_timer()` and `cancel_timer()` operations.
 - Registering recurring Tk `after()` callbacks.
 - Scheduling the next occurrence after a timer callback has run.
 - Cancelling or replacing a prior scheduled callback.
@@ -38,6 +35,7 @@
 ## MAY SAFELY ASSUME
 
 - Application composition chooses what recurring work occurs.
+- App Shell makes the initial call to `start_timer()`.
 - Someone else will stop the main loop, if the system is NOT configured
   for closing automatically when there are no Toplevel windows.
 
@@ -53,12 +51,15 @@
 
 - Tk root creation, visible Toplevels, widget bindings, interaction-cycle
   behavior, the semantics of the scheduled callback, or closing a Toplevel.
+- The orchestration decision about when a caller starts or cancels the timer.
 
 
 ## Sketch
 
 ```text
-g["timer-handle"] = None
+g = {
+  "timer-handle": None
+}
 
 def start_timer():
     Call _schedule_next(), directly.
@@ -66,6 +67,9 @@ def start_timer():
 def cancel_timer():
     cancel the .after found at g["timer-handle"]
     reset g["timer-handle"] to None
+    Do not guard against None or another invalid handle: calling cancel_timer()
+    without a valid scheduled handle is a programmer error and should fail
+    visibly at the Tk boundary.
 
 def _on_timer():
     Call perform_periodic_callback_per_timer() on tk-runtime.

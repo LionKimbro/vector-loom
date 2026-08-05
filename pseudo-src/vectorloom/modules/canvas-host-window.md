@@ -1,4 +1,4 @@
-# Module — Canvas Host
+# Module — Canvas Host Window
 
 This program is for developing Vector-Loom data modeling, and basic rendering.
 
@@ -8,7 +8,7 @@ the Vector-Loom data to the user.
 
 ## Render Target
 
-`canvas_host.py`
+`canvas_host_window.py`
 
 ## OWNS
 
