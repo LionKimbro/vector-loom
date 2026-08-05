@@ -1,7 +1,10 @@
-I think I may have gone about this the wrong way.  I think it'd have gone better if:
-1. I had started small, with simple rendering of basic geometric objects.
-2. then, layer in an attachment hierarchy, demonstrating rotation, translation, scaling, around connector points, ...
-3. then, perhaps making an editor, for these pieces, ...
-4. then, perhaps making a more sophisticated transport, ...
+OK, we're pursuing the new direction.
+Last completed: * basic frame
 
-Right now, it seems that some "dead-ends" or mistakes are encoded in, and it's difficult to find my "in" to the project.
+Next steps:
+  - create a new conversation, but trained up on softspec v3
+  - have it define a data format that includes the basic elements, and also styles, but that doesn't have attachment ports, connections yet
+    - also, does NOT require more than definitions
+    - DO include definitions, -- I'd like it to support a library of things right now to start with
+  - create some examples
+  - then have the first chat render some things

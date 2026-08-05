@@ -13,8 +13,7 @@ authors = [{name = "Lion Kimbro"}]
 dependencies = []
 
 [project.scripts]
-vectorloom-viewer = "vectorloom.viewer:main"
-vectorloom-editor = "vectorloom.editor:main"
+vectorloom = "vectorloom.app_shell:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
