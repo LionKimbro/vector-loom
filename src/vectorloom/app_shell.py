@@ -17,4 +17,4 @@ def _perform_app_specific_setup():
     """Install the first Canvas host window and its periodic callback."""
     canvas_host_window.register_periodic_timer_callback()
     canvas_host_window.create_canvas_host_window()
-    canvas_host_window.populate_canvas_context_and_draw_initial_crosshair_experiment()
+    canvas_host_window.populate_canvas_context_and_start_kinetic_transform_experiment()

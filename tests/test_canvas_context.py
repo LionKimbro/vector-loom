@@ -2,6 +2,8 @@ import math
 import unittest
 
 from vectorloom import canvas_context
+from vectorloom import canvas_host_window
+from vectorloom import tk_runtime
 
 
 class FakeCanvas:
@@ -27,6 +29,17 @@ class FakeCanvas:
     def create_text(self, *args, **kwargs):
         self.calls.append(("text", args, kwargs))
         return len(self.calls)
+
+    def delete(self, *args):
+        self.calls.append(("delete", args, {}))
+
+
+class FakeWindow:
+    def __init__(self):
+        self.destroyed = False
+
+    def destroy(self):
+        self.destroyed = True
 
 
 class TransformStackMathTests(unittest.TestCase):
@@ -222,3 +235,64 @@ class CanvasContextTests(unittest.TestCase):
         self.assertEqual(kind, "polygon")
         self.assertPointAlmostEqual(args[:2], (0, 0))
         self.assertPointAlmostEqual(args[2:4], (0, 10))
+
+
+class CanvasHostWindowTests(unittest.TestCase):
+    def setUp(self):
+        canvas_context.styles.clear()
+        canvas_context.designs.clear()
+        canvas_context.S[:] = [canvas_context._identity_frame()]
+        self.canvas = FakeCanvas()
+        canvas_host_window.g.update({
+            "canvas": self.canvas,
+            "orbit-angle": 0,
+            "spin-angle": 0,
+            "counter-spin-angle": 0,
+            "bob-phase": 0,
+            "orbit-group": None,
+            "spin-group": None,
+            "counter-spin-group": None,
+        })
+
+    def test_kinetic_experiment_builds_and_draws_nested_groups(self):
+        canvas_host_window.populate_canvas_context_and_start_kinetic_transform_experiment()
+
+        self.assertIn("kinetic-transform-lab", canvas_context.designs)
+        self.assertIsNotNone(canvas_host_window.g["orbit-group"])
+        self.assertIsNotNone(canvas_host_window.g["spin-group"])
+        self.assertIsNotNone(canvas_host_window.g["counter-spin-group"])
+        self.assertEqual(self.canvas.calls[0], ("delete", ("all",), {}))
+        self.assertEqual(len(canvas_context.S), 1)
+
+    def test_timer_tick_advances_every_animation_transform(self):
+        canvas_host_window.populate_canvas_context_and_start_kinetic_transform_experiment()
+        call_count = len(self.canvas.calls)
+
+        canvas_host_window.periodic_timer_callback()
+
+        self.assertEqual(canvas_host_window.g["orbit-angle"], 2)
+        self.assertEqual(canvas_host_window.g["spin-angle"], 9)
+        self.assertEqual(canvas_host_window.g["counter-spin-angle"], 346)
+        self.assertGreater(canvas_host_window.g["bob-phase"], 0)
+        self.assertEqual(canvas_host_window.g["orbit-group"]["angle"], 2)
+        self.assertEqual(canvas_host_window.g["spin-group"]["angle"], 9)
+        self.assertEqual(canvas_host_window.g["counter-spin-group"]["angle"], 346)
+        self.assertEqual(self.canvas.calls[call_count], ("delete", ("all",), {}))
+        self.assertEqual(len(canvas_context.S), 1)
+
+    def test_close_unregisters_the_periodic_callback_before_destroying_window(self):
+        window = FakeWindow()
+        canvas_host_window.g.update({
+            "window": window,
+            "orbit-group": {"angle": 0},
+            "spin-group": {"angle": 0},
+            "counter-spin-group": {"angle": 0},
+        })
+        tk_runtime.g["periodic-callback"] = canvas_host_window.periodic_timer_callback
+
+        canvas_host_window.close_canvas_host_window()
+
+        self.assertIsNone(tk_runtime.g["periodic-callback"])
+        self.assertTrue(window.destroyed)
+        self.assertIsNone(canvas_host_window.g["canvas"])
+        self.assertIsNone(canvas_host_window.g["orbit-group"])
