@@ -57,7 +57,7 @@ def populate_canvas_context_and_draw_initial_crosshair_experiment():
         "stroke": "#222222",
         "width": 2,
     }
-    canvas_context.definitions["experiment-x"] = {
+    canvas_context.designs["experiment-x"] = {
         "contents": [
             {"type": "line", "x1": -20, "y1": -20,
              "x2": 20, "y2": 20, "style": "experiment-ink"},
@@ -65,7 +65,9 @@ def populate_canvas_context_and_draw_initial_crosshair_experiment():
              "x2": 20, "y2": -20, "style": "experiment-ink"},
         ],
     }
-    canvas_context.locate(50, 50)
-    canvas_context.draw("experiment-x")
-    canvas_context.locate(100, 50)
-    canvas_context.draw("experiment-x")
+    for x, y in ((50, 50), (100, 50)):
+        canvas_context.push_transform({"x": x, "y": y})
+        try:
+            canvas_context.draw("experiment-x")
+        finally:
+            canvas_context.drop_transform()

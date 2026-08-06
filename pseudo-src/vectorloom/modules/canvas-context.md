@@ -10,63 +10,65 @@
   that Canvas.
 - The named style open collection, `styles`.
 - The named design open collection, `designs`.
-- The current drawing location at `reg["x"]`, `reg["y"]`.
-- Establishing that current location with `locate(x, y)`.
-- Drawing one named VectorLoom Basic design relative to the current
-  location with `draw(drawing_name)`.
-- Translating each shape's design-local coordinates by the current
-  register location.
+- Traversing one named VectorLoom Basic design with `draw(design_name)`.
+- Traversing nested group contents and maintaining their drawing order.
+- Resolving each element-local coordinate through Transform Stack before
+  passing it to the Canvas.
 - Resolving a shape's named `style` reference against `styles`.
 
 ## READS
 
 - The VectorLoom Basic shape and style rules in
   `docs/raw/0015__vectorloom-basic.json`.
+- The Transform Stack contract in `pseudo-src/vectorloom/modules/transform-stack.md`.
+  Both this module and Transform Stack write into `canvas_context.py`.
 
 ## CALLS
 
 - The current Canvas's `create_line()`, `create_rectangle()`, `create_oval()`,
   and `create_text()` operations, as selected by the shape type.
+- Transform Stack's `push_transform()`, `drop_transform()`, and
+  `local_to_world()` operations.
 
 ## MAY SAFELY ASSUME
 
 - A caller has first set a real `tkinter.Canvas` with `set_canvas(canvas)`.
-- `locate(x, y)` establishes the current drawing location for a nearby,
-  synchronous drawing flow.
 - The named design exists in `designs`.
 - Shapes and their named style references conform to VectorLoom Basic.
+- Transform Stack has a valid current frame.
 
 ## ENSURES
 
-- `locate(x, y)` changes the current origin used by later `draw()` calls.
 - `draw("design-name")` creates the design's shapes on the current
-  Canvas in `contents` order, relative to that current origin.
-- Neither `locate()` nor `draw()` mutates a design.
+  Canvas in `contents` order, resolving all element-local coordinates with
+  `local_to_world()`.
+- `draw()` pushes each group transform before traversing its contents and
+  drops it afterward, even if drawing fails.
+- `draw()` does not mutate a design and leaves Transform Stack at its incoming
+  depth when it returns.
 - Later shapes in a design are drawn after earlier shapes and therefore
   appear above them on the Canvas.
 
 ## DOES NOT OWN
 
 - Creating, placing, sizing, titling, or destroying the Canvas Host Window.
+- The transform stack, transform composition, or point conversion. Those are
+  owned by Transform Stack even though both modules render into
+  `canvas_context.py`.
 - Loading, saving, validating, or otherwise managing the VectorLoom Basic
   document.
 - Deciding how styles and designs are populated; a later library-loading
   mechanism may populate these open collections.
 - Choosing which drawing to place in a larger scene.
 - Canvas interaction, input handling, or future editor behavior.
-- Preserving a drawing location across delayed callbacks, threads, recursion, or
-  uncontrolled re-entry; such work must establish its location again.
+- Preserving an externally chosen transform across delayed callbacks, threads,
+  recursion, or uncontrolled re-entry.
 
 ## Sketch
 
 ```python
 g = {
     "canvas": None
-}
-
-reg = {  # registers
-    "x": 0,
-    "y": 0
 }
 
 styles = {}    # named VectorLoom Basic styles
@@ -76,29 +78,33 @@ designs = {}   # named VectorLoom Basic designs
 def set_canvas(canvas):
     g["canvas"] = canvas
 
-def locate(x, y):
-    reg["x"] = x
-    reg["y"] = y
-
 def draw(design_name):
     Find design_name in designs.
-    For each shape in its contents, in order:
-        Look up the shape's named style in styles, if it has one.
-        Draw the shape on g["canvas"], offsetting every local coordinate by
-        reg["x"], reg["y"].
+    For each element in its contents, in order:
+        _draw_element(element)
     Return the Canvas item ids, in contents order.
 
+
+def _draw_element(element):
+    If element.type is "group":
+        transform_stack.push_transform(element)
+        try:
+            For each child in element.contents, in order:
+                _draw_element(child)
+        finally:
+            transform_stack.drop_transform()
+    Otherwise:
+        _draw_shape(element)
+
+
 def _draw_shape(shape):
-    line:     Canvas create_line with reg["x"], reg["y"] added to
-              x1, y1, x2, y2.
-    rect:     Canvas create_rectangle with reg["x"], reg["y"] added to
-              x, y and then w, h applied.
-    oval:     Canvas create_oval with reg["x"], reg["y"] added to
-              x, y and then w, h applied.
-    polyline: Canvas create_line with reg["x"], reg["y"] added to every
-              point.
-    text:     Canvas create_text with reg["x"], reg["y"] added to x, y,
-              plus text layout fields.
+    Resolve every shape coordinate with transform_stack.local_to_world().
+    line:     Canvas create_line with both endpoints resolved to world.
+    rect:     Canvas rendering policy receives its transformed geometry.
+    oval:     Canvas rendering policy receives its transformed geometry.
+    polyline: Canvas create_line with every point resolved to world.
+    text:     Canvas create_text with its anchor point resolved to world,
+              plus text layout fields and accumulated rotation.
 
 def _canvas_options_for_shape(shape, style):
     Map VectorLoom Basic style fields to the selected Canvas primitive.
