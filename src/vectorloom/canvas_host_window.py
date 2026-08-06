@@ -2,6 +2,7 @@
 
 import tkinter as tk
 
+from . import canvas_context
 from . import tk_runtime
 
 
@@ -47,3 +48,24 @@ def create_canvas_host_window():
         "chrome": chrome,
         "status": status,
     })
+
+
+def populate_canvas_context_and_draw_initial_crosshair_experiment():
+    """Install and draw the Canvas Host's disposable initial crosshair."""
+    canvas_context.set_canvas(g["canvas"])
+    canvas_context.styles["experiment-ink"] = {
+        "stroke": "#222222",
+        "width": 2,
+    }
+    canvas_context.definitions["experiment-x"] = {
+        "contents": [
+            {"type": "line", "x1": -20, "y1": -20,
+             "x2": 20, "y2": 20, "style": "experiment-ink"},
+            {"type": "line", "x1": -20, "y1": 20,
+             "x2": 20, "y2": -20, "style": "experiment-ink"},
+        ],
+    }
+    canvas_context.locate(50, 50)
+    canvas_context.draw("experiment-x")
+    canvas_context.locate(100, 50)
+    canvas_context.draw("experiment-x")

@@ -22,6 +22,7 @@
 - `tk_runtime.create_and_withdraw_root()`.
 - `timer.start_timer()`.
 - `canvas_host_window.create_canvas_host_window()`.
+- `canvas_host_window.populate_canvas_context_and_draw_initial_crosshair_experiment()`.
 
 ## MAY SAFELY ASSUME
 
@@ -55,4 +56,5 @@ def app_specific_setup():
     import canvas_host_window
     canvas_host_window.register_periodic_timer_callback()
     canvas_host_window.create_canvas_host_window()
+    canvas_host_window.populate_canvas_context_and_draw_initial_crosshair_experiment()
 ```

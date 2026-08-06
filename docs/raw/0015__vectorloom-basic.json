@@ -1,0 +1,245 @@
+{
+  "document": {
+    "document-id": "vectorloom.basic",
+    "title": "VectorLoom Basic Vector Library Format",
+    "tags": ["vectorloom", "vector", "graphics", "json", "softspec", "library"],
+    "purpose": "Describe the initial, small VectorLoom JSON format for a library of styled vector designs.",
+    "author": ["Lion Kimbro", "Codex (GPT-5)"],
+    "created": "2026-08-05",
+    "status": "working-draft"
+  },
+
+  "orientation": {
+    "summary": "A VectorLoom Basic document is a reusable vector library. It defines named styles and named designs; it does not itself choose a root design or a scene to render.",
+    "scope": [
+      "Supported primitives are line, rect, oval, polyline, and text.",
+      "Styles are reusable named drawing-property objects.",
+      "Designs are reusable named structures, each expressed in its own local coordinate system. A design may be a visible drawing or a structural or spatial mechanism."
+    ],
+    "not-yet-in-scope": [
+      "groups",
+      "instances or uses of designs",
+      "ports, connectors, and connections",
+      "document version markers and metadata",
+      "a document root or top-level drawing contents"
+    ]
+  },
+
+  "format-guide": {
+    "document-shape": "The format has two top-level sections: styles and designs. Other top-level fields are not part of VectorLoom Basic at this time.",
+    "styles": "An object mapping style names to style objects. A shape may refer to a named style with its style field.",
+    "designs": "An object mapping design names to design objects. Each design represents one reusable named structure.",
+    "design": "A design object has a contents array. Its items are shapes drawn in that design's local coordinate system. The list order is drawing order: later shapes are drawn over earlier shapes.",
+    "shape-identity": "A shape may have an id. The uniqueness scope of element ids is not yet decided.",
+    "coordinates": "Coordinates are abstract document units. Rect and oval use x, y, w, and h, where x and y are the top-left corner of the bounding box. Line uses x1, y1, x2, and y2. Polyline uses points as [x, y] pairs. Text uses x and y as its anchor point.",
+    "text-layout": "Text follows Tkinter Canvas text capabilities. anchor selects which of the text item's nine compass positions lies at x, y: n, ne, e, se, s, sw, w, nw, or center. It defaults to center. Font, wrapping width, wrapped-line justification, and angle may also be specified. Angles are in degrees; positive values rotate clockwise. Anchor placement is relative to the text item's bounding area; typographic-baseline placement is not part of this format.",
+    "style-resolution": "For now, style is a named reference only. Inline styles, style inheritance, and shape-level style overrides are deliberately unspecified."
+  },
+
+  "example": {
+    "styles": {
+      "ink": {"stroke": "#222222", "width": 2},
+      "wall": {"stroke": "#222222", "fill": "#fff4d6", "width": 2},
+      "roof": {"stroke": "#8b2e2e", "width": 3}
+    },
+    "designs": {
+      "drawing-of-a-house": {
+        "contents": [
+          {"type": "rect", "id": "body", "x": 0, "y": 40, "w": 120, "h": 80, "style": "wall"},
+          {"type": "polyline", "id": "roof", "points": [[-10, 40], [60, -10], [130, 40]], "style": "roof"},
+          {"type": "rect", "id": "door", "x": 48, "y": 80, "w": 24, "h": 40, "style": "ink"},
+          {"type": "oval", "id": "window", "x": 20, "y": 60, "w": 20, "h": 20, "style": "ink"},
+          {"type": "text", "id": "label", "x": 60, "y": 145, "anchor": "n", "text": "Home", "style": "ink"}
+        ]
+      }
+    }
+  },
+
+  "softspec": {
+    "types": {
+      "style-name": {
+        "type": "string",
+        "semantic_type": "style-name",
+        "description": "A name used as a key in styles and as a shape's style reference."
+      },
+      "design-name": {
+        "type": "string",
+        "semantic_type": "design-name",
+        "description": "A name used as a key in designs."
+      },
+      "shape-id": {
+        "type": "string",
+        "semantic_type": "local-shape-identifier",
+        "description": "An optional element identifier. Its uniqueness scope is not yet decided."
+      },
+      "coordinate": {
+        "type": "number",
+        "semantic_type": "document-coordinate"
+      },
+      "point": {
+        "type": "array",
+        "items": ["coordinate", "coordinate"],
+        "description": "An x, y coordinate pair."
+      },
+      "text-anchor": {
+        "type": "string",
+        "semantic_type": "tkinter-canvas-anchor",
+        "vocabulary": {
+          "n": "Top center.",
+          "ne": "Top right.",
+          "e": "Center right.",
+          "se": "Bottom right.",
+          "s": "Bottom center.",
+          "sw": "Bottom left.",
+          "w": "Center left.",
+          "nw": "Top left.",
+          "center": "Center."
+        },
+        "vocabulary_mode": "closed",
+        "description": "The part of a text item's bounding area positioned at x, y."
+      },
+      "text-justify": {
+        "type": "string",
+        "semantic_type": "tkinter-canvas-text-justification",
+        "vocabulary": {
+          "left": "Left-align wrapped lines.",
+          "center": "Center wrapped lines.",
+          "right": "Right-align wrapped lines."
+        },
+        "vocabulary_mode": "closed"
+      },
+      "tk-font-spec": {
+        "type": ["string", "array"],
+        "semantic_type": "tkinter-font-specification",
+        "description": "A Tk font name or a JSON representation of a Tk font descriptor, such as [\"TkDefaultFont\", 12, \"bold\"]."
+      },
+      "vector-style": {
+        "type": "object",
+        "description": "Concrete drawing properties for shapes.",
+        "keys": {
+          "stroke": {"type": ["string", "null"], "description": "Stroke color, or null for no stroke."},
+          "fill": {"type": ["string", "null"], "description": "Fill color, or null for no fill."},
+          "width": {"type": "number", "description": "Stroke width in document units."},
+          "dash": {"type": ["string", "array", "null"], "description": "Optional dash pattern, such as the string '6 4'."}
+        },
+        "additional_keys": true
+      },
+      "vector-shape": {
+        "type": ["line-shape", "rect-shape", "oval-shape", "polyline-shape", "text-shape"],
+        "description": "One supported VectorLoom Basic primitive shape."
+      }
+    },
+
+    "schemas": {
+      "line-shape": {
+        "title": "Line Shape",
+        "structure": {
+          "type": "object",
+          "keys": {
+            "type": {"discriminator": "line"},
+            "id": {"ref": "shape-id"},
+            "x1": {"ref": "coordinate", "required": true},
+            "y1": {"ref": "coordinate", "required": true},
+            "x2": {"ref": "coordinate", "required": true},
+            "y2": {"ref": "coordinate", "required": true},
+            "style": {"ref": "style-name"}
+          }
+        }
+      },
+      "rect-shape": {
+        "title": "Rectangle Shape",
+        "structure": {
+          "type": "object",
+          "keys": {
+            "type": {"discriminator": "rect"},
+            "id": {"ref": "shape-id"},
+            "x": {"ref": "coordinate", "required": true},
+            "y": {"ref": "coordinate", "required": true},
+            "w": {"ref": "coordinate", "required": true},
+            "h": {"ref": "coordinate", "required": true},
+            "style": {"ref": "style-name"}
+          }
+        }
+      },
+      "oval-shape": {
+        "title": "Oval Shape",
+        "structure": {
+          "type": "object",
+          "keys": {
+            "type": {"discriminator": "oval"},
+            "id": {"ref": "shape-id"},
+            "x": {"ref": "coordinate", "required": true},
+            "y": {"ref": "coordinate", "required": true},
+            "w": {"ref": "coordinate", "required": true},
+            "h": {"ref": "coordinate", "required": true},
+            "style": {"ref": "style-name"}
+          }
+        }
+      },
+      "polyline-shape": {
+        "title": "Polyline Shape",
+        "structure": {
+          "type": "object",
+          "keys": {
+            "type": {"discriminator": "polyline"},
+            "id": {"ref": "shape-id"},
+            "points": {"type": "array", "items": "point", "required": true},
+            "style": {"ref": "style-name"}
+          }
+        }
+      },
+      "text-shape": {
+        "title": "Text Shape",
+        "structure": {
+          "type": "object",
+          "keys": {
+            "type": {"discriminator": "text"},
+            "id": {"ref": "shape-id"},
+            "x": {"ref": "coordinate", "required": true},
+            "y": {"ref": "coordinate", "required": true},
+            "text": {"type": "string", "required": true},
+            "anchor": {"ref": "text-anchor", "description": "Defaults to center."},
+            "font": {"ref": "tk-font-spec", "description": "Defaults to Tk's normal canvas font."},
+            "width": {"ref": "coordinate", "description": "Optional maximum line width for wrapping text at word boundaries."},
+            "justify": {"ref": "text-justify", "description": "Alignment of wrapped lines; defaults to left."},
+            "angle": {"type": "number", "description": "Clockwise rotation in degrees around the anchor point; defaults to 0."},
+            "style": {"ref": "style-name"}
+          }
+        }
+      },
+      "vector-design": {
+        "title": "Vector Design",
+        "description": "A named reusable structure. Its shapes use coordinates local to this design.",
+        "structure": {
+          "type": "object",
+          "keys": {
+            "contents": {"type": "array", "items": "vector-shape", "required": true, "description": "Shapes in drawing order."}
+          },
+          "additional_keys": true
+        }
+      },
+      "vectorloom-basic-document": {
+        "title": "VectorLoom Basic Document",
+        "description": "A rootless library of styles and vector designs.",
+        "structure": {
+          "type": "object",
+          "keys": {
+            "styles": {
+              "type": "object",
+              "key_type": "style-name",
+              "value_type": "vector-style",
+              "required": true
+            },
+            "designs": {
+              "type": "object",
+              "key_type": "design-name",
+              "value_type": "vector-design",
+              "required": true
+            }
+          },
+          "additional_keys": false
+        }
+      }
+    }
+  }
+}
