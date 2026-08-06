@@ -1,0 +1,5 @@
+New Direction -- part 2 --
+Established: designs, styles;
+Recently added: nestable groups, local rotation and then translation wrt parent
+Next: connection points
+And then: define file packaging, and/or an editor
