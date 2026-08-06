@@ -13,12 +13,13 @@
     "summary": "A VectorLoom Basic document is a reusable vector library. It defines named styles and named designs; it does not itself choose a root design or a scene to render.",
     "scope": [
       "Supported primitives are line, rect, oval, polyline, and text.",
+      "Groups are non-rendering nested elements with a local position and rotation.",
       "Styles are reusable named drawing-property objects.",
       "Designs are reusable named structures, each expressed in its own local coordinate system. A design may be a visible drawing or a structural or spatial mechanism."
     ],
     "not-yet-in-scope": [
-      "groups",
       "instances or uses of designs",
+      "scaling transforms",
       "ports, connectors, and connections",
       "document version markers and metadata",
       "a document root or top-level drawing contents"
@@ -29,8 +30,10 @@
     "document-shape": "The format has two top-level sections: styles and designs. Other top-level fields are not part of VectorLoom Basic at this time.",
     "styles": "An object mapping style names to style objects. A shape may refer to a named style with its style field.",
     "designs": "An object mapping design names to design objects. Each design represents one reusable named structure.",
-    "design": "A design object has a contents array. Its items are shapes drawn in that design's local coordinate system. The list order is drawing order: later shapes are drawn over earlier shapes.",
-    "shape-identity": "A shape may have an id. The uniqueness scope of element ids is not yet decided.",
+    "design": "A design object has a contents array. Its items are elements in that design's local coordinate system. The list order is drawing order: later rendered shapes are drawn over earlier shapes.",
+    "group": "A group is a non-rendering element with x, y, angle, and contents. Its position and angle are relative to its parent group or, at top level, its containing design. Its contents use the group's local coordinate system.",
+    "transform-convention": "For a group local point, rotate around the group's local origin, then translate by its x and y position: parent_point = Translate(x, y) × Rotate(angle) × local_point. The x and y position places the local origin in the parent coordinate system; rotation does not rotate that translation vector around the parent origin.",
+    "element-identity": "A shape or group may have an id. The uniqueness scope of element ids is not yet decided.",
     "coordinates": "Coordinates are abstract document units. Rect and oval use x, y, w, and h, where x and y are the top-left corner of the bounding box. Line uses x1, y1, x2, and y2. Polyline uses points as [x, y] pairs. Text uses x and y as its anchor point.",
     "text-layout": "Text follows Tkinter Canvas text capabilities. anchor selects which of the text item's nine compass positions lies at x, y: n, ne, e, se, s, sw, w, nw, or center. It defaults to center. Font, wrapping width, wrapped-line justification, and angle may also be specified. Angles are in degrees; positive values rotate clockwise. Anchor placement is relative to the text item's bounding area; typographic-baseline placement is not part of this format.",
     "style-resolution": "For now, style is a named reference only. Inline styles, style inheritance, and shape-level style overrides are deliberately unspecified."
@@ -49,7 +52,9 @@
           {"type": "polyline", "id": "roof", "points": [[-10, 40], [60, -10], [130, 40]], "style": "roof"},
           {"type": "rect", "id": "door", "x": 48, "y": 80, "w": 24, "h": 40, "style": "ink"},
           {"type": "oval", "id": "window", "x": 20, "y": 60, "w": 20, "h": 20, "style": "ink"},
-          {"type": "text", "id": "label", "x": 60, "y": 145, "anchor": "n", "text": "Home", "style": "ink"}
+          {"type": "group", "id": "caption", "x": 60, "y": 145, "contents": [
+            {"type": "text", "id": "label", "x": 0, "y": 0, "anchor": "n", "text": "Home", "style": "ink"}
+          ]}
         ]
       }
     }
@@ -67,9 +72,9 @@
         "semantic_type": "design-name",
         "description": "A name used as a key in designs."
       },
-      "shape-id": {
+      "element-id": {
         "type": "string",
-        "semantic_type": "local-shape-identifier",
+        "semantic_type": "element-identifier",
         "description": "An optional element identifier. Its uniqueness scope is not yet decided."
       },
       "coordinate": {
@@ -127,6 +132,10 @@
       "vector-shape": {
         "type": ["line-shape", "rect-shape", "oval-shape", "polyline-shape", "text-shape"],
         "description": "One supported VectorLoom Basic primitive shape."
+      },
+      "vector-element": {
+        "type": ["vector-shape", "group"],
+        "description": "A primitive shape or non-rendering group in a design or group contents array."
       }
     },
 
@@ -137,7 +146,7 @@
           "type": "object",
           "keys": {
             "type": {"discriminator": "line"},
-            "id": {"ref": "shape-id"},
+            "id": {"ref": "element-id"},
             "x1": {"ref": "coordinate", "required": true},
             "y1": {"ref": "coordinate", "required": true},
             "x2": {"ref": "coordinate", "required": true},
@@ -152,7 +161,7 @@
           "type": "object",
           "keys": {
             "type": {"discriminator": "rect"},
-            "id": {"ref": "shape-id"},
+            "id": {"ref": "element-id"},
             "x": {"ref": "coordinate", "required": true},
             "y": {"ref": "coordinate", "required": true},
             "w": {"ref": "coordinate", "required": true},
@@ -167,7 +176,7 @@
           "type": "object",
           "keys": {
             "type": {"discriminator": "oval"},
-            "id": {"ref": "shape-id"},
+            "id": {"ref": "element-id"},
             "x": {"ref": "coordinate", "required": true},
             "y": {"ref": "coordinate", "required": true},
             "w": {"ref": "coordinate", "required": true},
@@ -182,7 +191,7 @@
           "type": "object",
           "keys": {
             "type": {"discriminator": "polyline"},
-            "id": {"ref": "shape-id"},
+            "id": {"ref": "element-id"},
             "points": {"type": "array", "items": "point", "required": true},
             "style": {"ref": "style-name"}
           }
@@ -194,7 +203,7 @@
           "type": "object",
           "keys": {
             "type": {"discriminator": "text"},
-            "id": {"ref": "shape-id"},
+            "id": {"ref": "element-id"},
             "x": {"ref": "coordinate", "required": true},
             "y": {"ref": "coordinate", "required": true},
             "text": {"type": "string", "required": true},
@@ -209,13 +218,29 @@
       },
       "vector-design": {
         "title": "Vector Design",
-        "description": "A named reusable structure. Its shapes use coordinates local to this design.",
+        "description": "A named reusable structure. Its contents use coordinates local to this design.",
         "structure": {
           "type": "object",
           "keys": {
-            "contents": {"type": "array", "items": "vector-shape", "required": true, "description": "Shapes in drawing order."}
+            "contents": {"type": "array", "items": "vector-element", "required": true, "description": "Elements in drawing order."}
           },
           "additional_keys": true
+        }
+      },
+      "group": {
+        "title": "Group",
+        "description": "A non-rendering nested element that establishes a local coordinate system for its contents.",
+        "structure": {
+          "type": "object",
+          "keys": {
+            "type": {"discriminator": "group"},
+            "id": {"ref": "element-id"},
+            "x": {"ref": "coordinate", "description": "Parent-relative x position of the group's local origin; defaults to 0."},
+            "y": {"ref": "coordinate", "description": "Parent-relative y position of the group's local origin; defaults to 0."},
+            "angle": {"type": "number", "description": "Clockwise rotation in degrees around the group's local origin; defaults to 0."},
+            "contents": {"type": "array", "items": "vector-element", "required": true, "description": "Elements in drawing order, in the group's local coordinate system."}
+          },
+          "additional_keys": false
         }
       },
       "vectorloom-basic-document": {
