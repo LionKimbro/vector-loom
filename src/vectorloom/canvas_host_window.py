@@ -55,6 +55,7 @@ def create_canvas_host_window():
 
     status = tk.Label(window, anchor="w", text="Canvas window created.")
     status.grid(row=2, column=0, sticky="ew")
+    canvas.bind("<Button-1>", handle_when_user_clicks_canvas_for_tag_inspection)
     window.protocol("WM_DELETE_WINDOW", close_canvas_host_window)
 
     g.update({
@@ -63,6 +64,21 @@ def create_canvas_host_window():
         "chrome": chrome,
         "status": status,
     })
+
+
+def handle_when_user_clicks_canvas_for_tag_inspection(event):
+    """Display the clicked Canvas item's tags in the host status bar."""
+    item_ids = g["canvas"].find_withtag("current")
+    if not item_ids:
+        g["status"].configure(text="No Canvas item under pointer.")
+        return
+
+    tags = g["canvas"].gettags(item_ids[0])
+    if not tags:
+        g["status"].configure(text="Canvas item has no tags.")
+        return
+
+    g["status"].configure(text=" | ".join(tags))
 
 
 def close_canvas_host_window():
@@ -111,7 +127,7 @@ def populate_canvas_context_and_start_kinetic_transform_experiment():
         ],
     }
     spin_group["contents"] = [
-        {"type": "rect", "x": -22, "y": -16, "w": 44, "h": 32, "style": "body"},
+        {"id": "body", "type": "rect", "x": -22, "y": -16, "w": 44, "h": 32, "style": "body"},
         {"type": "line", "x1": -45, "y1": 0, "x2": 45, "y2": 0, "style": "rotor"},
         {"type": "line", "x1": 0, "y1": -45, "x2": 0, "y2": 45, "style": "rotor"},
         counter_spin_group,
@@ -122,7 +138,7 @@ def populate_canvas_context_and_start_kinetic_transform_experiment():
     ]
     canvas_context.designs["kinetic-transform-lab"] = {
         "contents": [
-            {"type": "oval", "x": -150, "y": -150, "w": 300, "h": 300, "style": "orbit-guide"},
+            {"id": "orbit-guide", "type": "oval", "x": -150, "y": -150, "w": 300, "h": 300, "style": "orbit-guide"},
             {"type": "oval", "x": -8, "y": -8, "w": 16, "h": 16, "style": "body"},
             orbit_group,
         ],
