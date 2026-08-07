@@ -49,8 +49,9 @@ value; readers that interpret namespaces split only on the first colon.
 design map key during rendering. `instance:` is runtime placement data supplied
 by the caller and is not part of a VectorLoom Basic document.
 
-The exact Canvas Context API through which a caller supplies an instance name
-is not decided here. Whatever API is chosen must apply this contract.
+Canvas Context receives the optional instance name through
+`draw(design_name, instance_name=None)`. The supplied instance name applies to
+every primitive Canvas item created by that one draw call.
 
 ## Consequences
 

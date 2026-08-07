@@ -8,6 +8,11 @@ g = {
     "canvas": None,
 }
 
+reg = {
+    "design-name": None,
+    "instance-name": None,
+}
+
 styles = {}
 designs = {}
 
@@ -142,8 +147,10 @@ def world_to_local(world_x, world_y):
     return _apply_matrix(S[-1]["Minverse"], world_x, world_y)
 
 
-def draw(design_name):
+def draw(design_name, instance_name=None):
     """Draw one named design through the current transform stack frame."""
+    reg["design-name"] = design_name
+    reg["instance-name"] = instance_name
     design = designs[design_name]
     item_ids = []
     for element in design["contents"]:
@@ -166,11 +173,13 @@ def _draw_element(element):
 
 def _draw_shape(shape):
     shape_type = shape["type"]
+    tags = _canvas_tags_for_shape(shape)
     if shape_type == "line":
         x1, y1 = local_to_world(shape["x1"], shape["y1"])
         x2, y2 = local_to_world(shape["x2"], shape["y2"])
         return g["canvas"].create_line(
             x1, y1, x2, y2,
+            tags=tags,
             **_canvas_options_for_shape(shape, _style_for(shape)),
         )
     if shape_type == "rect":
@@ -184,6 +193,7 @@ def _draw_shape(shape):
             points.extend((world_x, world_y))
         return g["canvas"].create_line(
             *points,
+            tags=tags,
             **_canvas_options_for_shape(shape, _style_for(shape)),
         )
     if shape_type == "text":
@@ -211,6 +221,7 @@ def _draw_box_shape(shape, canvas_method_name):
             y,
             x + shape["w"],
             y + shape["h"],
+            tags=_canvas_tags_for_shape(shape),
             **_canvas_options_for_shape(shape, _style_for(shape)),
         )
     if canvas_method_name == "create_rectangle":
@@ -230,6 +241,7 @@ def _draw_rotated_rect(shape):
         points.extend((world_x, world_y))
     return g["canvas"].create_polygon(
         *points,
+        tags=_canvas_tags_for_shape(shape),
         **_polygon_options_for_shape(shape, _style_for(shape)),
     )
 
@@ -250,6 +262,7 @@ def _draw_rotated_oval(shape):
     return g["canvas"].create_polygon(
         *points,
         smooth=True,
+        tags=_canvas_tags_for_shape(shape),
         **_polygon_options_for_shape(shape, _style_for(shape)),
     )
 
@@ -269,7 +282,20 @@ def _draw_text(shape):
         # Tk Canvas uses counterclockwise-positive angles; Vector-Loom uses clockwise-positive.
         options["angle"] = -angle
     x, y = local_to_world(shape["x"], shape["y"])
+    options["tags"] = _canvas_tags_for_shape(shape)
     return g["canvas"].create_text(x, y, **options)
+
+
+def _canvas_tags_for_shape(shape):
+    """Return the Canvas identification tags for one rendered primitive."""
+    tags = ["design:" + reg["design-name"]]
+    if "id" in shape:
+        tags.append("shape:" + shape["id"])
+    for declared_tag in shape.get("tags", []):
+        tags.append("tag:" + declared_tag)
+    if reg["instance-name"] is not None:
+        tags.append("instance:" + reg["instance-name"])
+    return tuple(tags)
 
 
 def _style_for(shape):
