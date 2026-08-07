@@ -1,0 +1,8 @@
+Focusing right now on:
+
+  * Making sure I have good pseudo-code for each module
+  * thinking about: making sure it documents data structures, as well
+    - would want a good model for what a good overview of a data structure looks like
+
+percolating thought:  I need AI on demand -- both (a) small context-loadable processes doing one thing, and (b) long running agents.
+  - right now, these would be involved in very specific tasks of identifying and documenting data structures

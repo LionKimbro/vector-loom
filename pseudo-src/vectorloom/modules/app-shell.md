@@ -1,5 +1,10 @@
 # Module — Application Shell
 
+This is the outermost shell of the program. It brings the shared
+runtime to life, assembles this application’s particular pieces, and
+then lets the program run.
+
+
 ## Render Target
 
 `app_shell.py`
@@ -13,9 +18,11 @@
 - Kicking off the first window's creation.
 - Entering the Tk event loop after application composition is complete.
 
+
 ## READS
 
 - nothing
+
 
 ## CALLS
 
@@ -24,21 +31,24 @@
 - `canvas_host_window.create_canvas_host_window()`.
 - `canvas_host_window.populate_canvas_context_and_draw_initial_crosshair_experiment()`.
 
+
 ## MAY SAFELY ASSUME
 
 - The setup code will do what it needs to do, in order to make sure
   that there's something meaningful that happens when the periodic
   timer ticks.
 
+
 ## ENSURES
 
 - The application is setup before calling 'mainloop()'.
+
 
 ## DOES NOT OWN
 
 - Visible application windows.
 - Event-handler registration.
-- The implementation of timer scheduling or cancellation.
+- The implementation of timer (re-)scheduling, or timer cancellation.
 - Periodic timer response.
 
 

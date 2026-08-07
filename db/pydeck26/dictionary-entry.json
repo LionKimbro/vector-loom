@@ -1,0 +1,15 @@
+{
+  "id": "vector-loom",
+  "identity": {
+    "name": "vector-loom",
+    "title": "Vector Loom",
+    "tags": [
+      "vector",
+      "design",
+      "image",
+      "dataformat",
+      "editor"
+    ],
+    "hook": "vector design library data format, rendering system, and editor"
+  }
+}

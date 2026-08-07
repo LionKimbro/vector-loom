@@ -1,7 +1,15 @@
 # Module — Canvas Host Window
 
-This program is for developing Vector-Loom data modeling and basic rendering.
-It represents the Toplevel and Canvas used to present Vector-Loom data.
+The program is for developing Vector-Loom data modeling and basic
+rendering.  The tk-runtime, app-shell, timer -- those modules are
+the background host material.  This is the first module that's
+actually dedicated to the specific application: A harness for testing,
+demoing, and developing Vector-Loom.
+
+Specifically, this module builds the Toplevel window that hosts the
+Canvas that Vector-Loom will be developed in, and it also sets up the
+specific demo material.
+
 
 ## Render Target
 

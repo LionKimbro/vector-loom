@@ -1,5 +1,11 @@
 # Module — Canvas Context
 
+This module is the emerging core of a general Vector Loom Canvas
+package. It holds the active Canvas and the current drawing context,
+providing the place where Vector Loom drawings can be placed and
+rendered as the system grows.
+
+
 ## Render Target
 
 `canvas_context.py`

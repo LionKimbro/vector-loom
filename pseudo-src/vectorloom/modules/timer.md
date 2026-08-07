@@ -1,8 +1,14 @@
 # Module — Periodic Timer
 
+This module owns periodic time within the Tkinter runtime. It
+schedules recurring work and gives the application a regular
+heartbeat, without deciding what that work means.
+
+
 ## Render Target
 
 `timer.py`
+
 
 ## OWNS
 

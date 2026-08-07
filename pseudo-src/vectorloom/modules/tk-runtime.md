@@ -1,5 +1,11 @@
 # Module — Tk Runtime
 
+This module is the common runtime ground a Tkinter program lives
+within. Tkinter configuration, shared runtime services, and the hidden
+Tk root setup belong here; other such system-level needs may belong
+here as they arise. Timer control is delegated to its own module.
+
+
 ## Render Target
 
 `tk_runtime.py`
@@ -45,7 +51,7 @@
 ## DOES NOT OWN
 
 - System orchestration, application-specific configuration, or calling
-  `mainloop()`.
+  `mainloop()`.  (These belong to app-runtime.md.)
 - Calling `after()`, `after_cancel()`, or `quit()`.
   (The `timer` module does that.)
 - Timer interval/callback/after-id registers or the timer recurrence policy.

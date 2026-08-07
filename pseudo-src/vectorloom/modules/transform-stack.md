@@ -1,5 +1,10 @@
 # Module — Transform Stack
 
+This module manages the transforms used while drawing a design. It
+converts between local coordinates and world coordinates as nested
+drawing structures are traversed.
+
+
 ## Render Target
 
 `canvas_context.py`
