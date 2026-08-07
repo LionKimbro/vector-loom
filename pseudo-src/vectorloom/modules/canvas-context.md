@@ -10,6 +10,11 @@ rendered as the system grows.
 
 `canvas_context.py`
 
+## See Also
+
+- `../aspects/canvas-item-identification.md` — Canvas tags that preserve a
+  rendered primitive's design, shape, semantic, and placement identity.
+
 ## OWNS
 
 - The current Canvas at `g["canvas"]`, after a caller points this context at

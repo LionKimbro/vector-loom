@@ -33,7 +33,8 @@
     "design": "A design object has a contents array. Its items are elements in that design's local coordinate system. The list order is drawing order: later rendered shapes are drawn over earlier shapes.",
     "group": "A group is a non-rendering element with x, y, angle, and contents. Its position and angle are relative to its parent group or, at top level, its containing design. Its contents use the group's local coordinate system.",
     "transform-convention": "For a group local point, rotate around the group's local origin, then translate by its x and y position: parent_point = Translate(x, y) × Rotate(angle) × local_point. The x and y position places the local origin in the parent coordinate system; rotation does not rotate that translation vector around the parent origin.",
-    "element-identity": "A shape or group may have an id. The uniqueness scope of element ids is not yet decided.",
+    "element-identity": "A shape or group may have an id. The uniqueness scope of element ids is not yet decided. Primitive shapes may also have tags: an optional list of semantic labels. Groups do not have tags in VectorLoom Basic.",
+    "canvas-item-identification": "When a runtime realizes a primitive as a Tkinter Canvas item, the design key, optional shape id, and primitive tags can be preserved as Canvas tags. The render-time Canvas tag contract is described in pseudo-src/vectorloom/aspects/canvas-item-identification.md. A caller-supplied placement instance is runtime data, not a VectorLoom Basic document field.",
     "coordinates": "Coordinates are abstract document units. Rect and oval use x, y, w, and h, where x and y are the top-left corner of the bounding box. Line uses x1, y1, x2, and y2. Polyline uses points as [x, y] pairs. Text uses x and y as its anchor point.",
     "text-layout": "Text follows Tkinter Canvas text capabilities. anchor selects which of the text item's nine compass positions lies at x, y: n, ne, e, se, s, sw, w, nw, or center. It defaults to center. Font, wrapping width, wrapped-line justification, and angle may also be specified. Angles are in degrees; positive values rotate clockwise. Anchor placement is relative to the text item's bounding area; typographic-baseline placement is not part of this format.",
     "style-resolution": "For now, style is a named reference only. Inline styles, style inheritance, and shape-level style overrides are deliberately unspecified."
@@ -50,7 +51,7 @@
         "contents": [
           {"type": "rect", "id": "body", "x": 0, "y": 40, "w": 120, "h": 80, "style": "wall"},
           {"type": "polyline", "id": "roof", "points": [[-10, 40], [60, -10], [130, 40]], "style": "roof"},
-          {"type": "rect", "id": "door", "x": 48, "y": 80, "w": 24, "h": 40, "style": "ink"},
+          {"type": "rect", "id": "door", "tags": ["interactive", "doorway"], "x": 48, "y": 80, "w": 24, "h": 40, "style": "ink"},
           {"type": "oval", "id": "window", "x": 20, "y": 60, "w": 20, "h": 20, "style": "ink"},
           {"type": "group", "id": "caption", "x": 60, "y": 145, "contents": [
             {"type": "text", "id": "label", "x": 0, "y": 0, "anchor": "n", "text": "Home", "style": "ink"}
@@ -76,6 +77,16 @@
         "type": "string",
         "semantic_type": "element-identifier",
         "description": "An optional element identifier. Its uniqueness scope is not yet decided."
+      },
+      "shape-tag": {
+        "type": "string",
+        "semantic_type": "shape-semantic-tag",
+        "description": "One semantic label declared on a primitive shape."
+      },
+      "shape-tags": {
+        "type": "array",
+        "items": "shape-tag",
+        "description": "Optional semantic labels declared on a primitive shape."
       },
       "coordinate": {
         "type": "number",
@@ -147,6 +158,7 @@
           "keys": {
             "type": {"discriminator": "line"},
             "id": {"ref": "element-id"},
+            "tags": {"ref": "shape-tags"},
             "x1": {"ref": "coordinate", "required": true},
             "y1": {"ref": "coordinate", "required": true},
             "x2": {"ref": "coordinate", "required": true},
@@ -162,6 +174,7 @@
           "keys": {
             "type": {"discriminator": "rect"},
             "id": {"ref": "element-id"},
+            "tags": {"ref": "shape-tags"},
             "x": {"ref": "coordinate", "required": true},
             "y": {"ref": "coordinate", "required": true},
             "w": {"ref": "coordinate", "required": true},
@@ -177,6 +190,7 @@
           "keys": {
             "type": {"discriminator": "oval"},
             "id": {"ref": "element-id"},
+            "tags": {"ref": "shape-tags"},
             "x": {"ref": "coordinate", "required": true},
             "y": {"ref": "coordinate", "required": true},
             "w": {"ref": "coordinate", "required": true},
@@ -192,6 +206,7 @@
           "keys": {
             "type": {"discriminator": "polyline"},
             "id": {"ref": "element-id"},
+            "tags": {"ref": "shape-tags"},
             "points": {"type": "array", "items": "point", "required": true},
             "style": {"ref": "style-name"}
           }
@@ -204,6 +219,7 @@
           "keys": {
             "type": {"discriminator": "text"},
             "id": {"ref": "element-id"},
+            "tags": {"ref": "shape-tags"},
             "x": {"ref": "coordinate", "required": true},
             "y": {"ref": "coordinate", "required": true},
             "text": {"type": "string", "required": true},

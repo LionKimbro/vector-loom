@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "guid": "7dd1c74e-7d23-42bf-ab50-b0daedeb7339",
+      "title": "Editor could use invisible Canvas for hit detection",
+      "description": "",
+      "status": "conceived",
+      "date-conceived": "2026-08-07",
+      "date-entered": "2026-08-07",
+      "notes": "https://chatgpt.com/c/6a75aa56-9664-83e8-8668-1c00a69fb079",
+      "tags": [
+        "hitdetection",
+        "hit",
+        "detect",
+        "canvas",
+        "invisible",
+        "polygon",
+        "fill"
+      ],
+      "pinned": true
+    }
+  ]
+}
