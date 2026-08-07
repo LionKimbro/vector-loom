@@ -8,6 +8,8 @@ The rendered application is planned for a project beneath `src/`.
 
 - `project-profile/` — target habitat, conventions, and project-wide assumptions.
 - `modules/` — bounded sketches for renderable implementation regions.
+- `data-structures/` — lightweight diagrams and contracts for major shared
+  structures.
 - `interfaces/` — capabilities supplied by the host system, tools, frameworks, and libraries.
 - `aspects/` — cross-cutting contracts and rules that apply across modules.
 

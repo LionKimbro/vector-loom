@@ -9,43 +9,36 @@ drawing structures are traversed.
 
 `canvas_context.py`
 
+## See Also
+
+- `../data-structures/transform-stack.md` — the Transform Stack's shape,
+  semantic types, mutation authority, invariants, and lifetime.
+- The VectorLoom transform and clockwise-angle conventions in
+  `docs/raw/0015__vectorloom-basic.json`.
+
+
 ## OWNS
 
-- The drawing-time transform stack, `S`.
-- A non-droppable identity root frame at the bottom of `S`.
-- Each frame’s local, parent-relative `x`, `y`, and `angle` values.
-- Each frame’s derived local-to-world affine transform, `M`, and cached inverse,
-  `Minverse`.
+- The operations that maintain and use the Transform Stack structure.
 - Pushing and dropping nested local transforms.
-- Mutating the top frame’s local position and angle.
+- Locating, sliding, and turning the current top frame.
 - Converting points between the current local coordinate system and world
   coordinates.
 
 ## READS
 
-- The VectorLoom transform and clockwise-angle conventions in
-  `docs/raw/0015__vectorloom-basic.json`.
-
 ## MAY SAFELY ASSUME
 
-- The root frame has no parent and represents world coordinates.
-- Every non-root frame is positioned and oriented relative to the frame beneath
-  it.
-- Angles are degrees; positive angles are clockwise in screen coordinates.
-- Scaling is not part of VectorLoom Basic yet, so every transform represented
-  here is invertible.
+- The Transform Stack has been initialized according to its data-structure
+  contract.
+- Scaling is not part of VectorLoom Basic yet, so every transform handled here
+  is invertible.
 
 ## ENSURES
 
-- `S` always contains at least the identity root frame.
-- The top frame always has the form
-  `{"x": x, "y": y, "angle": angle, "M": M, "Minverse": Minverse}`.
-- `M` maps points in the top frame’s local coordinate system to world
-  coordinates.
-- `Minverse` maps world coordinates back to the top frame’s local coordinate
-  system.
-- A caller cannot mutate the returned result of `peek_transform()` in a way
-  that leaves `M` or `Minverse` stale.
+- Each public operation preserves the Transform Stack structure's invariants.
+- `local_to_world()` and `world_to_local()` use the current top frame.
+- `peek_transform()` returns a safe view of the current top frame.
 
 ## DOES NOT OWN
 
@@ -54,32 +47,6 @@ drawing structures are traversed.
 - Shape geometry or rendering policy.
 - Bounds queries yet; a later extension may use this stack as the home for
   transform-aware bounds operations.
-
-## Transform Semantics
-
-Each frame stores local values relative to its parent:
-
-```python
-{"x": 0, "y": 0, "angle": 0}
-```
-
-Its derived transform is composed from the frame below it:
-
-```text
-frame.M = parent.M × Translate(frame.x, frame.y) × Rotate(frame.angle)
-```
-
-For clockwise degrees in screen coordinates, applying a frame with origin
-`(x, y)` and angle `a` to local point `(lx, ly)` has this effect:
-
-```text
-world_x = x + cos(a) × lx - sin(a) × ly
-world_y = y + sin(a) × lx + cos(a) × ly
-```
-
-For nested frames, the parent’s accumulated `M` is applied as part of the
-composition above. `Minverse` is derived whenever `M` is derived; it is never
-independently edited.
 
 ## Sketch
 
@@ -155,10 +122,3 @@ def derive_frame_transform(frame, parent_M):
     frame["M"] = parent_M × local_M
     frame["Minverse"] = inverse(frame["M"])
 ```
-
-## Use During Group Drawing
-
-Canvas Context pushes a group’s `{x, y, angle}` before traversing the group’s
-contents and drops it in a `finally` block afterward. It uses
-`local_to_world()` for each shape point. This makes nested group transforms
-temporary, composable, and unable to leak into later sibling elements.

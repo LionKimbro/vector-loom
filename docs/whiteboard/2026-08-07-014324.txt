@@ -1,0 +1,9 @@
+2026-08-07
+Mission right now: reusable graphical structures, that know their composition, connection points, positioning, interactive capability (?), so programs can build rich interfaces and diagrams w/o handplacing every visual element
+
+Priorities now:
+  * pseudo-code for each module  * documenting data structures  * named spatial points / connectors / ports -- "hand", "output port", "hinge", "attachment point"  role, tags, id
+  * identity carried through rendering - renderer can tell host what was clicked -- preserve tag, role, id, through rendering
+
+percolating thought:  I need AI on demand -- both (a) small context-loadable processes doing one thing, and (b) long running agents.
+  - right now, these would be involved in very specific tasks of identifying and documenting data structures

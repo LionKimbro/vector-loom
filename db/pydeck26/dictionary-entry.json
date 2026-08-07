@@ -11,5 +11,8 @@
       "editor"
     ],
     "hook": "vector design library data format, rendering system, and editor"
-  }
+  },
+  "design-intent": [
+    "Make reusable graphical structures that know how they are composed, connected, positioned, and interacted with, so programs can build rich interfaces and diagrams without hand-placing every visual element."
+  ]
 }
