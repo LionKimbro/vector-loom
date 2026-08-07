@@ -29,7 +29,7 @@ then lets the program run.
 - `tk_runtime.create_and_withdraw_root()`.
 - `timer.start_timer()`.
 - `canvas_host_window.create_canvas_host_window()`.
-- `canvas_host_window.populate_canvas_context_and_draw_initial_crosshair_experiment()`.
+- `canvas_host_window.start_canvas_host_demo()`.
 
 
 ## MAY SAFELY ASSUME
@@ -64,7 +64,6 @@ function main():
 def app_specific_setup():
     "Isolate app-specific setup here."
     import canvas_host_window
-    canvas_host_window.register_periodic_timer_callback()
     canvas_host_window.create_canvas_host_window()
-    canvas_host_window.populate_canvas_context_and_draw_initial_crosshair_experiment()
+    canvas_host_window.start_canvas_host_demo()
 ```
