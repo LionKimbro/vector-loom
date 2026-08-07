@@ -17,6 +17,21 @@
         "polygon",
         "fill"
       ],
+      "pinned": false
+    },
+    {
+      "guid": "53d60240-80b8-41af-a772-0feff08a9d55",
+      "title": "Run-Time Skeleton Manipulation / Mutator API",
+      "description": "It should be possible to manipulate the skeleton with ease, \"from the outside.\"\nYou should be able to say: \"on instance <instance-id>, find the group named <foo>, (or at this path: ...), and rotate it 30 degrees to the right.\"\nOr translate it dX, dY, per it's parent's coordinate frame, ...",
+      "status": "conceived",
+      "date-conceived": "2026-08-07",
+      "date-entered": "2026-08-07",
+      "notes": "",
+      "tags": [
+        "skeleton",
+        "api",
+        "manipulation"
+      ],
       "pinned": true
     }
   ]

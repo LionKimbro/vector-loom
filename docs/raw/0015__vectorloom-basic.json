@@ -14,13 +14,16 @@
     "scope": [
       "Supported primitives are line, rect, oval, polyline, and text.",
       "Groups are non-rendering nested elements with a local position and rotation.",
+      "Connector points are non-rendering named local coordinate frames for attachment and port semantics.",
       "Styles are reusable named drawing-property objects.",
       "Designs are reusable named structures, each expressed in its own local coordinate system. A design may be a visible drawing or a structural or spatial mechanism."
     ],
     "not-yet-in-scope": [
       "instances or uses of designs",
       "scaling transforms",
-      "ports, connectors, and connections",
+      "actual attachment behavior",
+      "compatibility rules",
+      "routed wiring",
       "document version markers and metadata",
       "a document root or top-level drawing contents"
     ]
@@ -30,10 +33,11 @@
     "document-shape": "The format has two top-level sections: styles and designs. Other top-level fields are not part of VectorLoom Basic at this time.",
     "styles": "An object mapping style names to style objects. A shape may refer to a named style with its style field.",
     "designs": "An object mapping design names to design objects. Each design represents one reusable named structure.",
-    "design": "A design object has a contents array. Its items are elements in that design's local coordinate system. The list order is drawing order: later rendered shapes are drawn over earlier shapes.",
+    "design": "A design object has a contents array. Its items are elements in that design's local coordinate system. The list order is drawing order for rendered shapes: later rendered shapes are drawn over earlier shapes.",
     "group": "A group is a non-rendering element with x, y, angle, and contents. Its position and angle are relative to its parent group or, at top level, its containing design. Its contents use the group's local coordinate system.",
+    "connector-point": "A connector point is a non-rendering named local coordinate frame with x, y, angle, role, and optional tags. Its resolved position and orientation are derived through the transforms of its parent groups. Connector ids are unique within their containing design.",
     "transform-convention": "For a group local point, rotate around the group's local origin, then translate by its x and y position: parent_point = Translate(x, y) × Rotate(angle) × local_point. The x and y position places the local origin in the parent coordinate system; rotation does not rotate that translation vector around the parent origin.",
-    "element-identity": "A shape or group may have an id. The uniqueness scope of element ids is not yet decided. Primitive shapes may also have tags: an optional list of semantic labels. Groups do not have tags in VectorLoom Basic.",
+    "element-identity": "A shape or group may have an id. The uniqueness scope of these optional element ids is not yet decided. A connector point must have an id, unique within its containing design. Shapes, groups, and connector points may have tags: an optional list of semantic labels.",
     "canvas-item-identification": "When a runtime realizes a primitive as a Tkinter Canvas item, the design key, optional shape id, and primitive tags can be preserved as Canvas tags. The render-time Canvas tag contract is described in pseudo-src/vectorloom/aspects/canvas-item-identification.md. A caller-supplied placement instance is runtime data, not a VectorLoom Basic document field.",
     "coordinates": "Coordinates are abstract document units. Rect and oval use x, y, w, and h, where x and y are the top-left corner of the bounding box. Line uses x1, y1, x2, and y2. Polyline uses points as [x, y] pairs. Text uses x and y as its anchor point.",
     "text-layout": "Text follows Tkinter Canvas text capabilities. anchor selects which of the text item's nine compass positions lies at x, y: n, ne, e, se, s, sw, w, nw, or center. It defaults to center. Font, wrapping width, wrapped-line justification, and angle may also be specified. Angles are in degrees; positive values rotate clockwise. Anchor placement is relative to the text item's bounding area; typographic-baseline placement is not part of this format.",
@@ -53,6 +57,8 @@
           {"type": "polyline", "id": "roof", "points": [[-10, 40], [60, -10], [130, 40]], "style": "roof"},
           {"type": "rect", "id": "door", "tags": ["interactive", "doorway"], "x": 48, "y": 80, "w": 24, "h": 40, "style": "ink"},
           {"type": "oval", "id": "window", "x": 20, "y": 60, "w": 20, "h": 20, "style": "ink"},
+          {"type": "connector", "id": "front-door", "x": 60, "y": 120, "angle": 90, "role": "attachment", "tags": ["entrance"]},
+          {"type": "connector", "id": "power-port", "x": 120, "y": 80, "role": "port", "tags": ["electrical"]},
           {"type": "group", "id": "caption", "x": 60, "y": 145, "contents": [
             {"type": "text", "id": "label", "x": 0, "y": 0, "anchor": "n", "text": "Home", "style": "ink"}
           ]}
@@ -76,17 +82,27 @@
       "element-id": {
         "type": "string",
         "semantic_type": "element-identifier",
-        "description": "An optional element identifier. Its uniqueness scope is not yet decided."
+        "description": "An element identifier. It is optional unless an element schema requires it; the uniqueness scope of optional element ids is not yet decided."
       },
-      "shape-tag": {
+      "element-tag": {
         "type": "string",
-        "semantic_type": "shape-semantic-tag",
-        "description": "One semantic label declared on a primitive shape."
+        "semantic_type": "element-semantic-tag",
+        "description": "One semantic label declared on an element."
       },
-      "shape-tags": {
+      "element-tags": {
         "type": "array",
-        "items": "shape-tag",
-        "description": "Optional semantic labels declared on a primitive shape."
+        "items": "element-tag",
+        "description": "Optional semantic labels declared on an element."
+      },
+      "connector-role": {
+        "type": "string",
+        "semantic_type": "connector-role",
+        "vocabulary": {
+          "attachment": "A connector intended as an attachment point.",
+          "port": "A connector intended as a port."
+        },
+        "vocabulary_mode": "open",
+        "description": "The semantic role of a connector point."
       },
       "coordinate": {
         "type": "number",
@@ -145,8 +161,8 @@
         "description": "One supported VectorLoom Basic primitive shape."
       },
       "vector-element": {
-        "type": ["vector-shape", "group"],
-        "description": "A primitive shape or non-rendering group in a design or group contents array."
+        "type": ["vector-shape", "group", "connector-point"],
+        "description": "A primitive shape, non-rendering group, or non-rendering connector point in a design or group contents array."
       }
     },
 
@@ -158,7 +174,7 @@
           "keys": {
             "type": {"discriminator": "line"},
             "id": {"ref": "element-id"},
-            "tags": {"ref": "shape-tags"},
+            "tags": {"ref": "element-tags"},
             "x1": {"ref": "coordinate", "required": true},
             "y1": {"ref": "coordinate", "required": true},
             "x2": {"ref": "coordinate", "required": true},
@@ -174,7 +190,7 @@
           "keys": {
             "type": {"discriminator": "rect"},
             "id": {"ref": "element-id"},
-            "tags": {"ref": "shape-tags"},
+            "tags": {"ref": "element-tags"},
             "x": {"ref": "coordinate", "required": true},
             "y": {"ref": "coordinate", "required": true},
             "w": {"ref": "coordinate", "required": true},
@@ -190,7 +206,7 @@
           "keys": {
             "type": {"discriminator": "oval"},
             "id": {"ref": "element-id"},
-            "tags": {"ref": "shape-tags"},
+            "tags": {"ref": "element-tags"},
             "x": {"ref": "coordinate", "required": true},
             "y": {"ref": "coordinate", "required": true},
             "w": {"ref": "coordinate", "required": true},
@@ -206,7 +222,7 @@
           "keys": {
             "type": {"discriminator": "polyline"},
             "id": {"ref": "element-id"},
-            "tags": {"ref": "shape-tags"},
+            "tags": {"ref": "element-tags"},
             "points": {"type": "array", "items": "point", "required": true},
             "style": {"ref": "style-name"}
           }
@@ -219,7 +235,7 @@
           "keys": {
             "type": {"discriminator": "text"},
             "id": {"ref": "element-id"},
-            "tags": {"ref": "shape-tags"},
+            "tags": {"ref": "element-tags"},
             "x": {"ref": "coordinate", "required": true},
             "y": {"ref": "coordinate", "required": true},
             "text": {"type": "string", "required": true},
@@ -251,10 +267,28 @@
           "keys": {
             "type": {"discriminator": "group"},
             "id": {"ref": "element-id"},
+            "tags": {"ref": "element-tags"},
             "x": {"ref": "coordinate", "description": "Parent-relative x position of the group's local origin; defaults to 0."},
             "y": {"ref": "coordinate", "description": "Parent-relative y position of the group's local origin; defaults to 0."},
             "angle": {"type": "number", "description": "Clockwise rotation in degrees around the group's local origin; defaults to 0."},
             "contents": {"type": "array", "items": "vector-element", "required": true, "description": "Elements in drawing order, in the group's local coordinate system."}
+          },
+          "additional_keys": false
+        }
+      },
+      "connector-point": {
+        "title": "Connector Point",
+        "description": "A non-rendering named local coordinate frame for attachment or port semantics.",
+        "structure": {
+          "type": "object",
+          "keys": {
+            "type": {"discriminator": "connector"},
+            "id": {"ref": "element-id", "required": true, "description": "A connector identifier unique within the containing design."},
+            "x": {"ref": "coordinate", "required": true},
+            "y": {"ref": "coordinate", "required": true},
+            "angle": {"type": "number", "description": "Clockwise rotation in degrees; defaults to 0."},
+            "role": {"ref": "connector-role", "required": true},
+            "tags": {"ref": "element-tags"}
           },
           "additional_keys": false
         }

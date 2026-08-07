@@ -1,0 +1,11 @@
+2026-08-07
+Mission right now: USABLE = CONNETORS + ATTACHMENT + PRESENTATION + EDITOR
+
+Priorities now:
+  1. Work out how connecting works, from an API angle.  Do you keep track of all connectors assembled so far?  Is an instance-id required?
+  * THINK ABOUT: Do you want only "painting," or do you want "retained" mode.
+  2. Implement attachment drawing.
+  3. Organize work on isolating the core package, and then making an (also isolated) editor and demonstration runner.
+
+percolating thought:  I need AI on demand -- both (a) small context-loadable processes doing one thing, and (b) long running agents.
+  - right now, these would be involved in very specific tasks of identifying and documenting data structures
