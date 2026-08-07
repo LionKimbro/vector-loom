@@ -23,6 +23,14 @@
       "url": "https://chatgpt.com/c/6a737a65-48d0-83e8-846b-6d468720c7c6",
       "hook": "here, we turn to a simple restart",
       "description": ""
+    },
+    {
+      "id": "5331310c-0c16-4538-9796-55198262293d",
+      "date": "2026-08-06",
+      "title": "Transform Stack Architecture",
+      "url": "https://chatgpt.com/c/6a7449ba-cf2c-83e8-a791-5abae0a7b3ef",
+      "hook": "local <-> world coordinate transformations",
+      "description": ""
     }
   ]
 }

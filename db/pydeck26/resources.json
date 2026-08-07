@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "path": "docs/raw/",
+      "filename": "0015__vectorloom-basic.json",
+      "hook": "core documentation of the vectorloom data format",
+      "kind": "file"
+    },
+    {
+      "path": "pseudo-src/",
+      "filename": "vectorloom",
+      "hook": "core pseudo-code (rendered into the actual Python package)",
+      "kind": "folder"
+    },
+    {
+      "path": "pseudo-src/vectorloom/",
+      "filename": "modules",
+      "hook": "- module pseudo-code, specifically",
+      "kind": "folder"
+    },
+    {
+      "path": "pseudo-src/vectorloom/",
+      "filename": "data-structures",
+      "hook": "- data structures, specifically",
+      "kind": "folder"
+    }
+  ]
+}
