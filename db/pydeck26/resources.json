@@ -7,6 +7,12 @@
       "kind": "file"
     },
     {
+      "path": "docs/raw/",
+      "filename": "0020__vectorloom-project-structure-direction.md",
+      "hook": "project structure",
+      "kind": "file"
+    },
+    {
       "path": "pseudo-src/",
       "filename": "vectorloom",
       "hook": "core pseudo-code (rendered into the actual Python package)",

@@ -1,7 +1,7 @@
 {
-  "purpose": "\"Vector Loom\"  -- a 2d canvas tkinter structure vector graphic graphics.  Eventually, it will be (a) a data format for vector structures, (b) a runtime for using them, and (c) a editor (or collection of editors) for such structures.  But presently, we're starting with just a small core to develop the concept -- implementing a subset of a data format to come, and a small runtime for testing these concepts.",
+  "purpose": "\"Vector Loom\"  -- a 2d canvas tkinter structure vector graphic graphics.  It consists of a data format for vector structures, a runtime for using them, and an editor.  Presently, I'm targeting the editor.",
   "options": {
-    "encourage-questions": false,
+    "encourage-questions": true,
     "request-ack": true
   },
   "documents": {
@@ -87,7 +87,7 @@
     },
     "tkinter-conventions": {
       "selected": true,
-      "designation": "required",
+      "designation": "recommended",
       "reason": "When you write tkinter user interfaces, follow these guidelines."
     },
     "tkintertester-reference": {
