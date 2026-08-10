@@ -91,10 +91,15 @@ with its connector ID:
 For example:
 
 ```text
-find_connector("sword-17", "grip")
+select_connector("sword-17", "grip")
 ```
 
-can establish the current resolved connector as working context for a nearby
-operation. Its result needs to preserve the connector's role, tags, and
-effective coordinate frame so later attachment or connection mechanisms can
-reason about it.
+places the resolved connector in the current working context for a nearby
+operation. Its record preserves the connector's role, tags, and effective
+coordinate frame so later attachment or connection mechanisms can reason
+about it.
+
+## See Also
+
+- [`canvas-context.md`](../../pseudo-src/vectorloom/modules/canvas-context.md)
+  — the current immediate-mode connector registry and selection mechanism.

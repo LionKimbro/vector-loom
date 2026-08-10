@@ -12,6 +12,14 @@ drawing operation is not yet a durable instance record. It currently labels
 Canvas items but does not preserve a named placed design that can later be
 found, moved, rotated, attached, or detached.
 
+## Present Immediate-Mode Direction
+
+For the time being, Vector Loom is taking an immediate-mode path. A render pass
+may produce an ephemeral connector registry for the caller-provided instance
+IDs it draws, but this registry is not a persistent scene or assembly world.
+This document remains a provisional direction for the hypothetical future in
+which durable placed instances and their mutation become necessary.
+
 Attachment therefore requires a future instance or assembly world that retains
 placed-instance identity and transform state. This is separate from the
 reusable VectorLoom Basic design library: mutating a placed instance should not
@@ -23,7 +31,7 @@ A connector lookup may establish the current resolved connector as working
 context:
 
 ```text
-find_connector("sword-17", "grip")
+select_connector("sword-17", "grip")
 ```
 
 The resulting context can supply the connector's role, tags, and effective
@@ -35,7 +43,7 @@ A future mutation language may naturally include operations such as:
 
 ```text
 select(instance_name)
-find_connector(instance_name, connector_id)  -> current connector context
+select_connector(instance_name, connector_id)  -> current connector context
 attach(instance_name)
 rotate(group_id, degrees, flags=["absolute"])
 rotate(group_id, degrees, flags=["relative"])
@@ -56,3 +64,5 @@ the shared reusable design.
 ## See Also
 
 - [`ADR 0005: Retained mode or direct draw`](../../pseudo-src/vectorloom/adr/0005-retained-mode-or-direct-draw.md)
+- [`canvas-context.md`](../../pseudo-src/vectorloom/modules/canvas-context.md)
+  — the present immediate-mode connector registry.
