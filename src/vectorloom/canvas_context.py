@@ -10,11 +10,13 @@ g = {
 
 reg = {
     "design-name": None,
-    "instance-name": None,
+    "instance-id": None,
+    "connector": None,
 }
 
 styles = {}
 designs = {}
+connectors = {}
 
 
 def _identity_matrix():
@@ -147,28 +149,92 @@ def world_to_local(world_x, world_y):
     return _apply_matrix(S[-1]["Minverse"], world_x, world_y)
 
 
-def draw(design_name, instance_name=None):
+def clear_connectors():
+    """Clear the connector records produced by earlier drawing."""
+    connectors.clear()
+    reg["connector"] = None
+
+
+def select_connector(instance_id, connector_id):
+    """Select and return one connector record by its instance and connector IDs."""
+    record = connectors[(instance_id, connector_id)]
+    reg["connector"] = record
+    return record
+
+
+def draw(design_name, instance_id=None, flags=None):
     """Draw one named design through the current transform stack frame."""
+    if flags is None:
+        flags = []
     reg["design-name"] = design_name
-    reg["instance-name"] = instance_name
+    reg["instance-id"] = instance_id
     design = designs[design_name]
+    attached = "attach" in flags
+    if attached:
+        if reg["connector"] is None:
+            raise RuntimeError("Cannot attach a design without a selected connector.")
+        push_transform(reg["connector"])
     item_ids = []
-    for element in design["contents"]:
-        item_ids.extend(_draw_element(element))
+    try:
+        for element in design["contents"]:
+            item_ids.extend(_draw_element(element, flags))
+    finally:
+        if attached:
+            drop_transform()
     return item_ids
 
 
-def _draw_element(element):
+def _draw_element(element, flags):
     if element["type"] == "group":
         push_transform(element)
         try:
             item_ids = []
             for child in element["contents"]:
-                item_ids.extend(_draw_element(child))
+                item_ids.extend(_draw_element(child, flags))
             return item_ids
         finally:
             drop_transform()
+    if element["type"] == "connector":
+        if "dry-run" in flags:
+            _require_instance_id_for_connector()
+        else:
+            _record_connector(element)
+        return []
+    if "dry-run" in flags:
+        return []
     return [_draw_shape(element)]
+
+
+def _require_instance_id_for_connector():
+    if reg["instance-id"] is None:
+        raise RuntimeError("A connector-producing draw requires instance_id.")
+
+
+def _record_connector(connector):
+    _require_instance_id_for_connector()
+    push_transform(connector)
+    try:
+        frame = peek_transform()
+        x, y, angle = _world_pose_from_matrix(frame["M"])
+        record = {
+            "instance-id": reg["instance-id"],
+            "connector-id": connector["id"],
+            "connector-role": connector["role"],
+            "connector-tags": list(connector.get("tags", [])),
+            "x": x,
+            "y": y,
+            "angle": angle,
+            "M": frame["M"],
+            "Minverse": frame["Minverse"],
+        }
+        connectors[(record["instance-id"], record["connector-id"])] = record
+    finally:
+        drop_transform()
+
+
+def _world_pose_from_matrix(matrix):
+    a, b, _c, _d, x, y = matrix
+    return x, y, math.degrees(math.atan2(b, a))
 
 
 def _draw_shape(shape):
@@ -293,8 +359,8 @@ def _canvas_tags_for_shape(shape):
         tags.append("shape:" + shape["id"])
     for declared_tag in shape.get("tags", []):
         tags.append("tag:" + declared_tag)
-    if reg["instance-name"] is not None:
-        tags.append("instance:" + reg["instance-name"])
+    if reg["instance-id"] is not None:
+        tags.append("instance:" + reg["instance-id"])
     return tuple(tags)
 
 

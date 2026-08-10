@@ -175,6 +175,7 @@ class CanvasContextTests(unittest.TestCase):
     def setUp(self):
         canvas_context.styles.clear()
         canvas_context.designs.clear()
+        canvas_context.clear_connectors()
         canvas_context.S[:] = [canvas_context._identity_frame()]
         self.canvas = FakeCanvas()
         canvas_context.set_canvas(self.canvas)
@@ -219,7 +220,7 @@ class CanvasContextTests(unittest.TestCase):
         self.assertEqual(len(canvas_context.S), incoming_depth)
         kind, args, options = self.canvas.calls[0]
         self.assertEqual(kind, "line")
-        self.assertEqual(options, {})
+        self.assertEqual(options, {"tags": ("design:nested",)})
         self.assertPointAlmostEqual(args[:2], (15, 20))
         self.assertPointAlmostEqual(args[2:4], (15, 30))
 
@@ -235,6 +236,99 @@ class CanvasContextTests(unittest.TestCase):
         self.assertEqual(kind, "polygon")
         self.assertPointAlmostEqual(args[:2], (0, 0))
         self.assertPointAlmostEqual(args[2:4], (0, 10))
+
+    def test_connector_is_recorded_with_its_effective_world_frame(self):
+        canvas_context.designs["arm"] = {
+            "contents": [{
+                "type": "group",
+                "x": 10,
+                "y": 20,
+                "angle": 90,
+                "contents": [{
+                    "type": "connector",
+                    "id": "hand",
+                    "x": 5,
+                    "y": 0,
+                    "role": "attachment",
+                    "tags": ["grip", "hot-spot"],
+                }],
+            }],
+        }
+
+        self.assertEqual(canvas_context.draw("arm", "left-arm"), [])
+
+        record = canvas_context.select_connector("left-arm", "hand")
+        self.assertEqual(record["connector-role"], "attachment")
+        self.assertEqual(record["connector-tags"], ["grip", "hot-spot"])
+        self.assertPointAlmostEqual((record["x"], record["y"]), (10, 25))
+        self.assertTrue(math.isclose(record["angle"], 90, abs_tol=1e-9))
+        self.assertPointAlmostEqual(
+            canvas_context._apply_matrix(record["M"], 0, 0),
+            (10, 25),
+        )
+        self.assertPointAlmostEqual(
+            canvas_context._apply_matrix(record["Minverse"], 10, 25),
+            (0, 0),
+        )
+        self.assertEqual(self.canvas.calls, [])
+
+    def test_connector_without_an_instance_id_raises_after_prior_shapes_draw(self):
+        canvas_context.designs["requires-id"] = {
+            "contents": [
+                {"type": "line", "x1": 0, "y1": 0, "x2": 5, "y2": 0},
+                {"type": "connector", "id": "hand", "x": 5, "y": 0, "role": "attachment"},
+            ],
+        }
+
+        with self.assertRaisesRegex(RuntimeError, "requires instance_id"):
+            canvas_context.draw("requires-id")
+
+        self.assertEqual(len(self.canvas.calls), 1)
+        self.assertEqual(canvas_context.connectors, {})
+
+    def test_dry_run_uses_the_normal_traversal_without_drawing_or_recording(self):
+        canvas_context.designs["requires-id"] = {
+            "contents": [{
+                "type": "group",
+                "contents": [
+                    {"type": "line", "x1": 0, "y1": 0, "x2": 5, "y2": 0},
+                    {"type": "connector", "id": "hand", "x": 5, "y": 0, "role": "attachment"},
+                ],
+            }],
+        }
+
+        with self.assertRaisesRegex(RuntimeError, "requires instance_id"):
+            canvas_context.draw("requires-id", flags=["dry-run"])
+
+        self.assertEqual(self.canvas.calls, [])
+        self.assertEqual(canvas_context.connectors, {})
+        self.assertEqual(len(canvas_context.S), 1)
+
+    def test_attach_draws_from_the_selected_connector_frame(self):
+        canvas_context.designs["anchor"] = {
+            "contents": [{
+                "type": "connector",
+                "id": "joint",
+                "x": 10,
+                "y": 20,
+                "angle": 90,
+                "role": "attachment",
+            }],
+        }
+        canvas_context.designs["child"] = {
+            "contents": [{"type": "line", "x1": 0, "y1": 0, "x2": 5, "y2": 0}],
+        }
+        canvas_context.draw("anchor", "base")
+        canvas_context.select_connector("base", "joint")
+
+        self.assertEqual(canvas_context.draw("child", "child", ["attach"]), [1])
+
+        kind, args, options = self.canvas.calls[0]
+        self.assertEqual(kind, "line")
+        self.assertPointAlmostEqual(args[:2], (10, 20))
+        self.assertPointAlmostEqual(args[2:4], (10, 25))
+        self.assertEqual(options["tags"], ("design:child", "instance:child"))
+        self.assertEqual(len(canvas_context.S), 1)
 
 
 class CanvasHostWindowTests(unittest.TestCase):
