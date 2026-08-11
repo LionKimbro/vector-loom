@@ -18,3 +18,6 @@ zookeeper-report.json
 # Emacs backup and autosave files
 *~
 \#*\#
+
+# Lion's project files
+.pydeck26/
