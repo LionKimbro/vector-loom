@@ -151,7 +151,7 @@
       "reason": "The program will use the Reducer-Core Architecture. Read this to understand the architecture and its specific terms of use."
     },
     "cira": {
-      "selected": false,
+      "selected": true,
       "designation": "required",
       "reason": "The program is likely to use, or may be required to use, the Coordinated Interactive Runtime Architecture (CIRA). Read this so that you know how to implement it."
     }

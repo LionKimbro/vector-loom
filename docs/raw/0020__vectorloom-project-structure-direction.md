@@ -3,6 +3,7 @@ date: 2026-08-10
 title: Vector Loom Project Structure Direction
 purpose: Establish the BAD-first project structure for the reusable runtime,
   future editor, and future viewer.
+superseded-by: 0021__vectorloom-tkinter-project-structure-direction.md
 ```
 
 # Vector Loom Project Structure Direction
