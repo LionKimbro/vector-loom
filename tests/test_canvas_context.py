@@ -1,9 +1,10 @@
 import math
 import unittest
+from unittest.mock import patch
 
-from vectorloom import canvas_context
-from vectorloom import canvas_host_window
-from vectorloom import tk_runtime
+from vectorloom.canvas import canvas_context, transform_stack
+from vectorloom.demo import canvas_host_demo
+from vectorloom.tk_runtime import app_shell, canvas_host_window, tk_runtime
 
 
 class FakeCanvas:
@@ -42,9 +43,47 @@ class FakeWindow:
         self.destroyed = True
 
 
+class FakeRoot:
+    def __init__(self, events):
+        self.events = events
+
+    def mainloop(self):
+        self.events.append("mainloop")
+
+
+class AppShellTests(unittest.TestCase):
+    def setUp(self):
+        app_shell.config["app-specific-setup"] = None
+
+    def test_main_requires_an_application_specific_setup_function(self):
+        with self.assertRaisesRegex(RuntimeError, "app-specific-setup"):
+            app_shell.main()
+
+    def test_main_runs_setup_before_starting_the_timer_and_mainloop(self):
+        events = []
+        root = FakeRoot(events)
+
+        def create_root():
+            events.append("root")
+            tk_runtime.g["root"] = root
+
+        def set_up_application():
+            events.append("setup")
+
+        def start_timer():
+            events.append("timer")
+
+        app_shell.config["app-specific-setup"] = set_up_application
+        with patch.object(tk_runtime, "create_and_withdraw_root", create_root):
+            with patch("vectorloom.tk_runtime.app_shell.timer.start_timer", start_timer):
+                app_shell.main()
+
+        self.assertEqual(events, ["root", "setup", "timer", "mainloop"])
+
+
 class TransformStackMathTests(unittest.TestCase):
     def setUp(self):
-        canvas_context.S[:] = [canvas_context._identity_frame()]
+        transform_stack.S[:] = [transform_stack.identity_frame()]
 
     def assertPointAlmostEqual(self, actual, expected):
         self.assertTrue(
@@ -54,25 +93,25 @@ class TransformStackMathTests(unittest.TestCase):
         )
 
     def test_01_identity_frame_maps_a_point_to_itself(self):
-        self.assertPointAlmostEqual(canvas_context.local_to_world(3, -4), (3, -4))
+        self.assertPointAlmostEqual(transform_stack.local_to_world(3, -4), (3, -4))
 
     def test_02_locate_moves_the_root_frame(self):
-        canvas_context.locate(10, 20)
-        self.assertPointAlmostEqual(canvas_context.local_to_world(0, 0), (10, 20))
+        transform_stack.locate(10, 20)
+        self.assertPointAlmostEqual(transform_stack.local_to_world(0, 0), (10, 20))
 
     def test_03_positive_angle_rotates_clockwise(self):
-        canvas_context.turn(90)
-        self.assertPointAlmostEqual(canvas_context.local_to_world(4, 0), (0, 4))
+        transform_stack.turn(90)
+        self.assertPointAlmostEqual(transform_stack.local_to_world(4, 0), (0, 4))
 
     def test_04_root_slide_moves_in_world_coordinates(self):
-        canvas_context.locate(10, 20)
-        canvas_context.slide(-3, 7)
-        self.assertPointAlmostEqual(canvas_context.local_to_world(0, 0), (7, 27))
+        transform_stack.locate(10, 20)
+        transform_stack.slide(-3, 7)
+        self.assertPointAlmostEqual(transform_stack.local_to_world(0, 0), (7, 27))
 
     def test_05_push_with_defaults_preserves_the_current_transform(self):
-        canvas_context.locate(8, 9)
-        canvas_context.push_transform({})
-        self.assertPointAlmostEqual(canvas_context.local_to_world(0, 0), (8, 9))
+        transform_stack.locate(8, 9)
+        transform_stack.push_transform({})
+        self.assertPointAlmostEqual(transform_stack.local_to_world(0, 0), (8, 9))
 
     def test_06_child_translation_is_relative_to_an_unrotated_parent(self):
         canvas_context.locate(10, 20)
@@ -339,54 +378,49 @@ class CanvasHostWindowTests(unittest.TestCase):
         self.canvas = FakeCanvas()
         canvas_host_window.g.update({
             "canvas": self.canvas,
-            "orbit-angle": 0,
-            "spin-angle": 0,
-            "counter-spin-angle": 0,
-            "bob-phase": 0,
-            "orbit-group": None,
-            "spin-group": None,
-            "counter-spin-group": None,
         })
+        canvas_host_demo.stop_canvas_host_demo()
 
     def test_kinetic_experiment_builds_and_draws_nested_groups(self):
-        canvas_host_window.populate_canvas_context_and_start_kinetic_transform_experiment()
+        canvas_host_demo.start_canvas_host_demo()
 
         self.assertIn("kinetic-transform-lab", canvas_context.designs)
-        self.assertIsNotNone(canvas_host_window.g["orbit-group"])
-        self.assertIsNotNone(canvas_host_window.g["spin-group"])
-        self.assertIsNotNone(canvas_host_window.g["counter-spin-group"])
+        self.assertIsNotNone(canvas_host_demo.g["orbit-group"])
+        self.assertIsNotNone(canvas_host_demo.g["spin-group"])
+        self.assertIsNotNone(canvas_host_demo.g["counter-spin-group"])
         self.assertEqual(self.canvas.calls[0], ("delete", ("all",), {}))
         self.assertEqual(len(canvas_context.S), 1)
 
     def test_timer_tick_advances_every_animation_transform(self):
-        canvas_host_window.populate_canvas_context_and_start_kinetic_transform_experiment()
+        canvas_host_demo.start_canvas_host_demo()
         call_count = len(self.canvas.calls)
 
-        canvas_host_window.periodic_timer_callback()
+        canvas_host_demo.periodic_timer_callback()
 
-        self.assertEqual(canvas_host_window.g["orbit-angle"], 2)
-        self.assertEqual(canvas_host_window.g["spin-angle"], 9)
-        self.assertEqual(canvas_host_window.g["counter-spin-angle"], 346)
-        self.assertGreater(canvas_host_window.g["bob-phase"], 0)
-        self.assertEqual(canvas_host_window.g["orbit-group"]["angle"], 2)
-        self.assertEqual(canvas_host_window.g["spin-group"]["angle"], 9)
-        self.assertEqual(canvas_host_window.g["counter-spin-group"]["angle"], 346)
+        self.assertEqual(canvas_host_demo.g["orbit-angle"], 2)
+        self.assertEqual(canvas_host_demo.g["spin-angle"], 9)
+        self.assertEqual(canvas_host_demo.g["counter-spin-angle"], 346)
+        self.assertGreater(canvas_host_demo.g["bob-phase"], 0)
+        self.assertEqual(canvas_host_demo.g["orbit-group"]["angle"], 2)
+        self.assertEqual(canvas_host_demo.g["spin-group"]["angle"], 9)
+        self.assertEqual(canvas_host_demo.g["counter-spin-group"]["angle"], 346)
         self.assertEqual(self.canvas.calls[call_count], ("delete", ("all",), {}))
         self.assertEqual(len(canvas_context.S), 1)
 
     def test_close_unregisters_the_periodic_callback_before_destroying_window(self):
         window = FakeWindow()
-        canvas_host_window.g.update({
-            "window": window,
+        canvas_host_window.g["window"] = window
+        canvas_host_demo.g.update({
             "orbit-group": {"angle": 0},
             "spin-group": {"angle": 0},
             "counter-spin-group": {"angle": 0},
         })
-        tk_runtime.g["periodic-callback"] = canvas_host_window.periodic_timer_callback
+        canvas_host_window.set_close_callback(canvas_host_demo.stop_canvas_host_demo)
+        tk_runtime.g["periodic-callback"] = canvas_host_demo.periodic_timer_callback
 
         canvas_host_window.close_canvas_host_window()
 
         self.assertIsNone(tk_runtime.g["periodic-callback"])
         self.assertTrue(window.destroyed)
         self.assertIsNone(canvas_host_window.g["canvas"])
-        self.assertIsNone(canvas_host_window.g["orbit-group"])
+        self.assertIsNone(canvas_host_demo.g["orbit-group"])

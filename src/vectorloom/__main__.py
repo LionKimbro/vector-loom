@@ -1,6 +1,6 @@
 """Run Vector Loom with ``python -m vectorloom``."""
 
-from .app_shell import main
+from .demo.demo_bootstrap import main
 
 
 if __name__ == "__main__":
