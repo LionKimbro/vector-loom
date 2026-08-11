@@ -217,9 +217,28 @@ def handle_inspector_widget_activated(widget_name, value):
 
 
 def handle_window_close_request():
-    """Post the close request for later CIRA handling."""
-    event_queue.post_event({
-        "type": "WINDOW_CLOSE_REQUESTED",
-        "window": "editor",
-        "ms": tk_runtime.now_ms(),
+    """Post the already-semantic editor exit request to the discrete queue."""
+    from . import interaction_runtime
+
+    interaction_runtime.post_semantic_event({"type": "EXIT_EDITOR"})
+
+
+def destroy_editor_window():
+    """Destroy the editor Toplevel after the runtime routes its close effect."""
+    window = widgets["window"]
+    widgets.update({
+        "window": None,
+        "pane-row": None,
+        "library-pane": None,
+        "designs-frame": None,
+        "designs-tree": None,
+        "styles-frame": None,
+        "styles-tree": None,
+        "canvas-pane": None,
+        "canvas": None,
+        "inspector-pane": None,
+        "inspector-frame": None,
+        "status": None,
     })
+    if window is not None:
+        window.destroy()

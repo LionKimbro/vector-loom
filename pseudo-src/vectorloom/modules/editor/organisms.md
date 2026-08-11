@@ -2,7 +2,7 @@
 
 This module owns continuous editor interaction episodes.  It will contain
 finite-state machines such as click selection, drawing, drag, pan, and later
-resize; it starts as a registered but behavior-light frame.
+resize; its initial registry is empty.
 
 ## Render Target
 
@@ -29,5 +29,8 @@ resize; it starts as a registered but behavior-light frame.
 
 ## Initial Frame
 
-The initial registry may be empty.  Add an organism only with a bounded sketch
-for its tokenizer facts, Judge resources, semantic events, and immediates.
+The initial registry is empty.  `EXIT_EDITOR` is posted directly because a
+window-close request is already semantic meaning, not a continuous gesture.
+
+Add each later organism only with a bounded sketch for its tokenizer facts,
+Judge resources, semantic events, and immediates.

@@ -45,11 +45,12 @@ While no library is loaded, Projection supplies temporary `(no designs loaded)`
 and `(no styles loaded)` Treeview rows so their raw-selection adapters can also
 be exercised.
 
-Canvas, Treeview, keyboard, and close-request callbacks post normalized raw
-records to the FIFO input queue.  Adjacent pointer-motion records coalesce
-without crossing another event record.  Projection displays the queue's recent
-diagnostic history because the pending queue is normally empty by the time the
-projection pass occurs.
+Canvas, Treeview, and keyboard callbacks post normalized raw records to the
+FIFO input queue.  Adjacent pointer-motion records coalesce without crossing
+another event record.  The window-close callback posts the already-semantic
+`EXIT_EDITOR` request directly to the semantic-event queue.  Projection
+displays the raw queue's recent diagnostic history because the pending queue is
+normally empty by the time the projection pass occurs.
 
 ## CIRA Status
 

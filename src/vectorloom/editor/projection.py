@@ -9,6 +9,8 @@ from . import world_model
 
 def project():
     """Refresh the editor's temporary library and input diagnostic views."""
+    if editor_window.widgets["window"] is None:
+        return
     _project_library_trees()
     project_temporary_input_queue_diagnostic()
 

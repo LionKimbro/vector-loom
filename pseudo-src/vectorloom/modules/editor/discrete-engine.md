@@ -39,7 +39,12 @@ SET_SELECTION
 SET_FOCAL_ADDRESS
 SET_PRIMARY_DESIGN
 SET_ACTIVE_STYLE
+EXIT_EDITOR
 ```
+
+`EXIT_EDITOR` is posted directly by the Editor Window close callback.  It
+emits an explicit Editor Window destroy effect.  The Runtime routes that
+effect; the reducer does not destroy Tk widgets directly.
 
 ## DOES NOT OWN
 

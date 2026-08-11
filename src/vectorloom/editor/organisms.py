@@ -7,7 +7,7 @@ organisms = []
 
 
 def initialize_organisms():
-    """Reset the initially empty organism registry."""
+    """Reset the initially empty editor interaction-organism registry."""
     organisms.clear()
 
 

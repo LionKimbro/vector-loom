@@ -86,8 +86,30 @@ class EditorInteractionRuntimeTests(unittest.TestCase):
         with patch("vectorloom.editor.interaction_runtime.projection.project") as project:
             interaction_runtime.run_update_cycle()
 
-        self.assertEqual(interaction_runtime.raw["events"], [
+        self.assertEqual(interaction_runtime.raw["last-event-type"], "KEY_PRESSED")
+        self.assertEqual(interaction_runtime.raw["keys-down"], ["a"])
+        self.assertEqual(event_queue.recent_events, [
             {"type": "KEY_PRESSED", "keysym": "a", "ms": 5},
         ])
-        self.assertEqual(event_queue.recent_events, interaction_runtime.raw["events"])
         project.assert_called_once_with()
+
+    def test_motion_packet_updates_raw_once_for_each_preserved_sample(self):
+        event_queue.post_pointer_motion(10, 20, 1)
+        event_queue.post_pointer_motion(30, 40, 2)
+
+        with patch("vectorloom.editor.interaction_runtime.projection.project") as project:
+            interaction_runtime.run_update_cycle()
+
+        self.assertEqual((interaction_runtime.raw["x"], interaction_runtime.raw["y"]), (30, 40))
+        self.assertTrue(interaction_runtime.raw["inside-canvas"])
+        self.assertEqual(interaction_runtime.raw["ms"], 2)
+        self.assertEqual(project.call_count, 2)
+
+    def test_semantic_exit_request_routes_to_a_window_destroy_effect(self):
+        interaction_runtime.post_semantic_event({"type": "EXIT_EDITOR"})
+
+        with patch("vectorloom.editor.interaction_runtime.editor_window.destroy_editor_window") as destroy:
+            with patch("vectorloom.editor.interaction_runtime.projection.project"):
+                interaction_runtime.run_update_cycle()
+
+        destroy.assert_called_once_with()

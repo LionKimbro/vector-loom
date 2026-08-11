@@ -31,6 +31,9 @@ contents shown inside those controls.
 - The left library pane places the Designs Treeview above the Styles Treeview.
 - Tk callbacks post raw facts only; they do not select items, mutate the
   library, interpret gestures, or render projection.
+- The window-close callback is the narrow exception: it posts the already
+  semantic `EXIT_EDITOR` request directly to Interaction Runtime's semantic
+  event queue.
 
 ## DOES NOT OWN
 
@@ -272,11 +275,7 @@ def handle_inspector_widget_activated(widget_name, value):
 
 
 def handle_window_close_request():
-    event_queue.post_event({
-        "type": "WINDOW_CLOSE_REQUESTED",
-        "window": "editor",
-        "ms": tk_runtime.now_ms(),
-    })
+    interaction_runtime.post_semantic_event({"type": "EXIT_EDITOR"})
 ```
 
 ## Projection Seam
