@@ -36,6 +36,8 @@ def _reduce_event(event, effects):
         workspace["focal-address"] = "."
     elif event_type == "SET_ACTIVE_STYLE":
         workspace["active-style-name"] = event.get("style-name")
+    elif event_type == "SET_ACTIVE_TOOL":
+        workspace["active-tool"] = event.get("tool")
     elif event_type == "EXIT_EDITOR":
         effects.append({"owner": "editor-window", "type": "DESTROY_EDITOR_WINDOW"})
         return

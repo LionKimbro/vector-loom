@@ -2,9 +2,23 @@
 
 from tkinter import ttk
 
+from . import discrete_engine
 from . import editor_window
 from . import event_queue
 from . import world_model
+
+
+TOOL_STATUS_TEXT = {
+    None: "Choose a tool to begin.",
+    "select": "Select items.",
+    "line": "Draw lines.",
+    "rectangle": "Draw rectangles.",
+    "oval": "Draw ovals.",
+    "polyline": "Draw polylines.",
+    "text": "Draw text.",
+    "group": "Draw groups.",
+    "connector": "Draw connectors.",
+}
 
 
 def project():
@@ -13,6 +27,15 @@ def project():
         return
     _project_library_trees()
     project_temporary_input_queue_diagnostic()
+    _project_status()
+
+
+def _project_status():
+    """Present the committed active drawing tool in the status bar."""
+    active_tool = discrete_engine.workspace.get("active-tool")
+    editor_window.widgets["status"].configure(
+        text=TOOL_STATUS_TEXT.get(active_tool, "Choose a tool to begin."),
+    )
 
 
 def _project_library_trees():

@@ -7,6 +7,18 @@ from ..tk_runtime import tk_runtime
 from . import event_queue
 
 
+TOOL_SPECS = (
+    ("select", "[s]", "Select items."),
+    ("line", "[L]", "Draw lines."),
+    ("rectangle", "[R]", "Draw rectangles."),
+    ("oval", "[O]", "Draw ovals."),
+    ("polyline", "[P]", "Draw polylines."),
+    ("text", "[T]", "Draw text."),
+    ("group", "[g]", "Draw groups."),
+    ("connector", "[c]", "Draw connectors."),
+)
+
+
 widgets = {
     "window": None,
     "pane-row": None,
@@ -16,11 +28,15 @@ widgets = {
     "styles-frame": None,
     "styles-tree": None,
     "canvas-pane": None,
+    "tools-frame": None,
     "canvas": None,
     "inspector-pane": None,
     "inspector-frame": None,
     "status": None,
 }
+
+tool_buttons = {}
+tooltip = {"window": None}
 
 
 def create_editor_window():
@@ -86,12 +102,66 @@ def create_canvas_pane(pane_row):
     """Create the center black drawing Canvas."""
     canvas_pane = ttk.Frame(pane_row, padding=6)
     canvas_pane.rowconfigure(0, weight=1)
-    canvas_pane.columnconfigure(0, weight=1)
+    canvas_pane.columnconfigure(1, weight=1)
     pane_row.add(canvas_pane, weight=3)
+    tools_frame = ttk.Frame(canvas_pane)
+    tools_frame.grid(row=0, column=0, sticky="ns", padx=(0, 6))
+    widgets["tools-frame"] = tools_frame
+    create_drawing_tool_buttons(tools_frame)
     canvas = tk.Canvas(canvas_pane, background="black", highlightthickness=0)
-    canvas.grid(row=0, column=0, sticky="nsew")
+    canvas.grid(row=0, column=1, sticky="nsew")
     widgets["canvas-pane"] = canvas_pane
     widgets["canvas"] = canvas
+
+
+def create_drawing_tool_buttons(tools_frame):
+    """Create the direct-semantic drawing-tool controls."""
+    tool_buttons.clear()
+    for row, (tool_name, label, description) in enumerate(TOOL_SPECS):
+        button = ttk.Button(
+            tools_frame,
+            text=label,
+            command=lambda selected_tool=tool_name: handle_drawing_tool_button(
+                selected_tool,
+            ),
+        )
+        button.grid(row=row, column=0, sticky="ew", pady=(0, 3))
+        button.bind(
+            "<Enter>",
+            lambda event, text=description: show_tooltip(event.widget, text),
+        )
+        button.bind("<Leave>", hide_tooltip)
+        tool_buttons[tool_name] = button
+
+
+def handle_drawing_tool_button(tool_name):
+    """Post a direct semantic request to make one tool active."""
+    from . import interaction_runtime
+
+    interaction_runtime.post_semantic_event({
+        "type": "SET_ACTIVE_TOOL",
+        "tool": tool_name,
+    })
+
+
+def show_tooltip(widget, text):
+    """Display a small tooltip immediately beside a drawing-tool button."""
+    hide_tooltip()
+    window = tk.Toplevel(widget)
+    window.overrideredirect(True)
+    x = widget.winfo_rootx() + widget.winfo_width() + 6
+    y = widget.winfo_rooty()
+    window.geometry(f"+{x}+{y}")
+    ttk.Label(window, text=text, padding=(4, 2)).grid()
+    tooltip["window"] = window
+
+
+def hide_tooltip(event=None):
+    """Remove the currently shown drawing-tool tooltip, if any."""
+    window = tooltip["window"]
+    tooltip["window"] = None
+    if window is not None:
+        window.destroy()
 
 
 def create_inspector_pane(pane_row):
@@ -226,6 +296,8 @@ def handle_window_close_request():
 def destroy_editor_window():
     """Destroy the editor Toplevel after the runtime routes its close effect."""
     window = widgets["window"]
+    hide_tooltip()
+    tool_buttons.clear()
     widgets.update({
         "window": None,
         "pane-row": None,
@@ -235,6 +307,7 @@ def destroy_editor_window():
         "styles-frame": None,
         "styles-tree": None,
         "canvas-pane": None,
+        "tools-frame": None,
         "canvas": None,
         "inspector-pane": None,
         "inspector-frame": None,

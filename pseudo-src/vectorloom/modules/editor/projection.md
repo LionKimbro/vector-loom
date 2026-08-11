@@ -15,6 +15,7 @@ inspector presentation, and editor-only overlays.
 - White/blue/green/red visual assignment on a black Canvas background.
 - The temporary diagnostic presentation of the ten most recent raw input
   records in the otherwise-reserved inspector frame.
+- Status-bar text describing the committed active drawing tool.
 
 ## READS
 

@@ -13,6 +13,7 @@ contents shown inside those controls.
 
 - The editor Toplevel and its widget handles.
 - The left library pane, center Canvas pane, and right inspector pane.
+- The vertical drawing-tool buttons immediately left of the Canvas.
 - The two library Treeview controls: Designs above Styles.
 - Tk bindings and thin callback adapters for Canvas, tree, inspector, and
   window keyboard input.
@@ -31,9 +32,9 @@ contents shown inside those controls.
 - The left library pane places the Designs Treeview above the Styles Treeview.
 - Tk callbacks post raw facts only; they do not select items, mutate the
   library, interpret gestures, or render projection.
-- The window-close callback is the narrow exception: it posts the already
-  semantic `EXIT_EDITOR` request directly to Interaction Runtime's semantic
-  event queue.
+- The window-close and drawing-tool callbacks are narrow exceptions: they post
+  already-semantic requests directly to Interaction Runtime's semantic event
+  queue.
 
 ## DOES NOT OWN
 
@@ -54,6 +55,7 @@ widgets = {
     "styles-frame": None,
     "styles-tree": None,
     "canvas-pane": None,
+    "tools-frame": None,
     "canvas": None,
     "inspector-pane": None,
     "inspector-frame": None,
@@ -150,17 +152,48 @@ def create_styles_tree(library_pane):
 def create_canvas_pane(pane_row):
     canvas_pane = ttk.Frame(pane_row, padding=6)
     canvas_pane.rowconfigure(0, weight=1)
-    canvas_pane.columnconfigure(0, weight=1)
+    canvas_pane.columnconfigure(1, weight=1)
     pane_row.add(canvas_pane, weight=3)
+
+    tools_frame = ttk.Frame(canvas_pane)
+    tools_frame.grid(row=0, column=0, sticky="ns", padx=(0, 6))
+    widgets["tools-frame"] = tools_frame
+    create_drawing_tool_buttons(tools_frame)
 
     canvas = tk.Canvas(
         canvas_pane,
         background="black",
         highlightthickness=0,
     )
-    canvas.grid(row=0, column=0, sticky="nsew")
+    canvas.grid(row=0, column=1, sticky="nsew")
     widgets["canvas-pane"] = canvas_pane
     widgets["canvas"] = canvas
+
+
+def create_drawing_tool_buttons(tools_frame):
+    tool_specs = (
+        ("select", "[s]", "select items"),
+        ("line", "[L]", "draw lines"),
+        ("rectangle", "[R]", "draw rectangles"),
+        ("oval", "[O]", "draw ovals"),
+        ("polyline", "[P]", "draw polylines"),
+        ("text", "[T]", "draw text"),
+        ("group", "[g]", "draw groups"),
+        ("connector", "[c]", "draw connectors"),
+    )
+
+    for row, (tool_name, label, tooltip) in enumerate(tool_specs):
+        create a ttk.Button labeled `label`
+        make its command call handle_drawing_tool_button(tool_name)
+        bind pointer enter and leave to show and hide a widget-local tooltip
+        grid it at `row`, column 0
+
+
+def handle_drawing_tool_button(tool_name):
+    interaction_runtime.post_semantic_event({
+        "type": "SET_ACTIVE_TOOL",
+        "tool": tool_name,
+    })
 
 
 def create_inspector_pane(pane_row):
@@ -289,3 +322,7 @@ draw the focal design and editor overlays on Canvas
 replace inspector-frame contents for committed selection
 set status-bar text and presentation
 ```
+
+The active drawing tool determines the status-bar text.  Its initial messages
+are: `select items`, `draw lines`, `draw rectangles`, `draw ovals`, `draw
+polylines`, `draw text`, `draw groups`, and `draw connectors`.

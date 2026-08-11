@@ -1,7 +1,13 @@
 import unittest
 from unittest.mock import patch
 
-from vectorloom.editor import discrete_engine, event_queue, interaction_runtime, projection
+from vectorloom.editor import (
+    discrete_engine,
+    editor_window,
+    event_queue,
+    interaction_runtime,
+    projection,
+)
 
 
 class FakeTree:
@@ -56,6 +62,9 @@ class EditorProjectionTests(unittest.TestCase):
             },
         })
 
+    def test_tool_status_text_describes_the_selected_tool(self):
+        self.assertEqual(projection.TOOL_STATUS_TEXT["line"], "Draw lines.")
+
 
 class EditorDiscreteEngineTests(unittest.TestCase):
     def setUp(self):
@@ -72,6 +81,27 @@ class EditorDiscreteEngineTests(unittest.TestCase):
         self.assertEqual([effect["owner"] for effect in effects], [
             "projection", "projection",
         ])
+
+    def test_set_active_tool_changes_workspace_and_requests_projection(self):
+        effects = discrete_engine.reduce_events([
+            {"type": "SET_ACTIVE_TOOL", "tool": "rectangle"},
+        ])
+
+        self.assertEqual(discrete_engine.workspace["active-tool"], "rectangle")
+        self.assertEqual(effects, [{"owner": "projection", "type": "WORKSPACE_CHANGED"}])
+
+
+class EditorWindowTests(unittest.TestCase):
+    def test_drawing_tool_button_posts_a_direct_semantic_event(self):
+        with patch(
+            "vectorloom.editor.interaction_runtime.post_semantic_event",
+        ) as post_semantic_event:
+            editor_window.handle_drawing_tool_button("line")
+
+        post_semantic_event.assert_called_once_with({
+            "type": "SET_ACTIVE_TOOL",
+            "tool": "line",
+        })
 
 
 class EditorInteractionRuntimeTests(unittest.TestCase):
