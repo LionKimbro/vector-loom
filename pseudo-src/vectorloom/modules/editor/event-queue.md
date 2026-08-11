@@ -13,6 +13,7 @@ callbacks and the editor CIRA Runtime.
 - Posting records and draining them in order.
 - Coalescing adjacent Canvas pointer-motion records while preserving sample
   order.
+- A temporary, bounded `recent-events` diagnostic history of drained records.
 
 ## ENSURES
 
@@ -41,6 +42,7 @@ or committed editor selection.
 
 ```python
 event_queue = []
+recent_events = []
 
 
 def post_pointer_motion(x, y, ms):
@@ -60,5 +62,7 @@ def post_event(event):
 def drain_events():
     pending = list(event_queue)
     event_queue.clear()
+    recent_events.extend(pending)
+    del recent_events[:-10]
     return pending
 ```

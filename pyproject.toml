@@ -14,6 +14,7 @@ dependencies = []
 
 [project.scripts]
 vectorloom = "vectorloom.demo.demo_bootstrap:main"
+vectorloom-editor = "vectorloom.editor.editor_bootstrap:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

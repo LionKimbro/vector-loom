@@ -1,4 +1,4 @@
-"""Vector Loom's initial Tkinter Canvas runtime."""
+"""Vector Loom's Tkinter Canvas runtime and demonstration."""
 
 from .demo.demo_bootstrap import main
 

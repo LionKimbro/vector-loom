@@ -1,4 +1,4 @@
-"""Run Vector Loom with ``python -m vectorloom``."""
+"""Run the Vector Loom demonstration with ``python -m vectorloom``."""
 
 from .demo.demo_bootstrap import main
 
