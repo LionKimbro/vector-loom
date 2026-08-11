@@ -6,8 +6,9 @@ The rendered application is planned for a project beneath `src/`.
 
 ## Layout
 
-- `project-profile/` — target habitat, conventions, and project-wide assumptions.
-- `modules/` — bounded sketches for renderable implementation regions.
+- `../project/` — target habitat, conventions, and project-wide assumptions.
+- `modules/` — bounded sketches for renderable implementation regions, grouped
+  by package responsibility.
 - `data-structures/` — lightweight diagrams and contracts for major shared
   structures.
 - `interfaces/` — capabilities supplied by the host system, tools, frameworks, and libraries.
@@ -20,4 +21,3 @@ target is where a future BAD render should place the implementation.
 A render may make routine local decisions, but must not change a
 boundary, ownership rule, or open decision without recording that
 change explicitly.
-

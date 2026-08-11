@@ -6,7 +6,7 @@ particular Vector Loom material the Canvas displays.
 
 ## Render Target
 
-`canvas_host_window.py`
+`src/vectorloom/tk_runtime/canvas_host_window.py`
 
 ## OWNS
 

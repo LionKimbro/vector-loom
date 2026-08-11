@@ -7,11 +7,11 @@ drawing structures are traversed.
 
 ## Render Target
 
-`canvas_context.py`
+`src/vectorloom/canvas/transform_stack.py`
 
 ## See Also
 
-- `../data-structures/transform-stack.md` — the Transform Stack's shape,
+- `../../data-structures/transform-stack.md` — the Transform Stack's shape,
   semantic types, mutation authority, invariants, and lifetime.
 - The VectorLoom transform and clockwise-angle conventions in
   `docs/raw/0015__vectorloom-basic.json`.

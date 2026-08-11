@@ -8,16 +8,16 @@ rendered as the system grows.
 
 ## Render Target
 
-`canvas_context.py`
+`src/vectorloom/canvas/canvas_context.py`
 
 
 ## See Also
 
-- `../aspects/canvas-item-identification.md` — Canvas tags that preserve a
+- `../../aspects/canvas-item-identification.md` — Canvas tags that preserve a
   rendered primitive's design, shape, semantic, and placement identity.
-- `../../../docs/raw/0015__vectorloom-basic.json` — the VectorLoom Basic shape,
+- `../../../../docs/raw/0015__vectorloom-basic.json` — the VectorLoom Basic shape,
   style, design, and group conventions.
-- `../../../docs/raw/0017__connector-points.md` — connector-point roles, tags,
+- `../../../../docs/raw/0017__connector-points.md` — connector-point roles, tags,
   and local-coordinate-frame semantics.
 - `transform-stack.md` — Transform Stack's operations and coordinate-frame
   contract.

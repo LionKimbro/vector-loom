@@ -8,7 +8,7 @@ where drawing work occurs.
 
 ## Owned By
 
-`modules/transform-stack.md`
+`modules/canvas/transform-stack.md`
 
 Only Transform Stack operations mutate this structure. Callers ask that module
 to push, drop, locate, slide, or turn; they do not edit stack frames directly.

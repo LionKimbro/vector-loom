@@ -6,13 +6,13 @@ laboratory, testing Canvas Context and Transform Stack together.
 
 ## Render Target
 
-`canvas_host_window.py`
+`src/vectorloom/demo/canvas_host_demo.py`
 
 ## See Also
 
-- `canvas-host-window.md` — the physical window and Canvas this demo uses.
-- `canvas-context.md` — design traversal and Canvas drawing.
-- `transform-stack.md` — nested coordinate-frame operations.
+- `../tk-runtime/canvas-host-window.md` — the physical window and Canvas this demo uses.
+- `../canvas/canvas-context.md` — design traversal and Canvas drawing.
+- `../canvas/transform-stack.md` — nested coordinate-frame operations.
 
 ## OWNS
 
