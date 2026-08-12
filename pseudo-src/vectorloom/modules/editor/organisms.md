@@ -27,10 +27,44 @@ resize; its initial registry is empty.
 - Completed interaction meaning becomes a semantic event; in-progress feedback
   becomes an immediate.
 
-## Initial Frame
+## DOES NOT OWN
 
-The initial registry is empty.  `EXIT_EDITOR` is posted directly because a
-window-close request is already semantic meaning, not a continuous gesture.
+- Perceptual fact derivation, resource arbitration, workspace state, World
+  Model mutation, or Canvas realization.
 
-Add each later organism only with a bounded sketch for its tokenizer facts,
-Judge resources, semantic events, and immediates.
+## Pseudocode
+
+### Line Drawing
+
+```text
+organism LINE-DRAWING:
+    state IDLE:
+        if active tool is line and Button 1 went down:
+            ask Judge whether Line Drawing may acquire pointer-drawing
+            if Judge accepts:
+                acquire pointer-drawing
+                remember the current focal-local pointer location as start-local
+                become DRAWING
+                issue line-draft from start-local to start-local
+        stop
+
+    state DRAWING:
+        if Button 1 is down:
+            issue line-draft from start-local to the current focal-local pointer location
+            stop
+        else:  # Button 1 is up
+            emit REQUEST_CREATE_LINE with start-local and the current focal-local pointer location
+            withdraw line-draft
+            release pointer-drawing
+            forget held values
+            become IDLE
+```
+
+### Exit Editor
+
+```text
+organism EXIT-EDITOR:
+    state IDLE:
+        if exit-editor was requested:
+            emit EXIT_EDITOR
+```

@@ -12,6 +12,7 @@ visible projection.
 
 - `raw`, `raw_prev`, `derived`, and `derived_prev` runtime snapshots.
 - The semantic-event queue.
+- The ephemeral runtime-stage register.
 - Update-cycle ordering, effect routing, and continuity-reset choreography.
 
 ## RAW Snapshot Shape
@@ -47,18 +48,32 @@ sample, in order.
 
 ## ENSURES
 
-```text
-drain raw input
-→ for each normalized record: preserve prior RAW and DERIVED snapshots
-→ apply that record to persistent RAW facts
-→ tokenize DERIVED
-→ maintain Judge and evaluate Organisms
-→ drain semantic events through Discrete Engine
-→ route effects
-→ render Projection
-```
+- The runtime-stage register is clear before the next update cycle, including
+  when a stage raises an error.
 
 ## DOES NOT OWN
 
 - Perceptual fact definitions, gesture behavior, semantic transition law,
   durable library state, history lineage, or Canvas/widget manifestation.
+
+## Pseudocode
+
+```text
+drain raw input
+→ for each normalized record:
+    stage APPLYING-RAW: preserve prior RAW and DERIVED snapshots; apply record
+    stage TOKENIZING: tokenize DERIVED
+    stage JUDGING: maintain Judge
+    stage ORGANISMS: evaluate Organisms
+    stage REDUCING: drain semantic events through Discrete Engine
+    stage ROUTING-EFFECTS: route directed effects to their owning machines
+    stage PROJECTING: render Projection
+→ clear runtime stage
+```
+
+```text
+def run a runtime stage(stage-name, work):
+    set runtime stage to stage-name
+    perform work
+    clear runtime stage even if work failed
+```

@@ -23,3 +23,17 @@ interaction means.
 
 - RAW/DERIVED facts, organism state transitions, editor workspace state, or
   library data.
+
+## First Resource — Pointer Drawing
+
+Line Drawing asks for the exclusive `pointer-drawing` resource.
+
+```python
+judge.check("pointer-drawing", owner="line-drawing")
+```
+
+If available, the organism commits that lease when the gesture begins; the
+lease remains inspectably owned while the provisional line exists.  On line
+completion or cancellation, the organism releases it.  The resource protocol
+does not know whether its owner is drawing a line, a rectangle, or another
+future shape.

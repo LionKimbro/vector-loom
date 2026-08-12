@@ -24,3 +24,16 @@ RAW input.
 
 - Gesture state, resource claims, committed selection, focal address, durable
   mutation, or projection.
+
+## Pseudocode
+
+### Tokenize Button 1 Edges
+
+Button 1 edge facts are derived from the two RAW snapshots.  The names describe
+physical state transitions, rather than Tk callback names:
+
+```python
+def tokenize_button_1_edges():
+    button-1-went-down is true if Button 1 was up last turn, but is down this turn
+    button-1-went-up is true if Button 1 was down last turn, but is up this turn
+```

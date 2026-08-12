@@ -23,6 +23,8 @@ contents shown inside those controls.
 
 - `event_queue` posting operations.
 - `tk_runtime.now_ms()` while creating time-bearing raw input records.
+- Interaction Runtime's stage observation before posting a Treeview selection
+  change.
 
 ## ENSURES
 
@@ -289,6 +291,9 @@ def handle_styles_tree_selection(event):
 
 
 def post_tree_selection_change(tree_name):
+    if Interaction Runtime stage is PROJECTING:
+        stop
+
     tree = widgets[tree_name]
     event_queue.post_event({
         "type": "TREE_SELECTION_CHANGED",
@@ -316,8 +321,9 @@ def handle_window_close_request():
 Projection later performs these operations against the stored widget handles:
 
 ```text
-replace Designs Treeview rows from the World Model's designs
-replace Styles Treeview rows from the World Model's styles
+reconcile Designs Treeview rows with the World Model's designs
+reconcile Styles Treeview rows with the World Model's styles
+mirror committed selection into the corresponding Treeview
 draw the focal design and editor overlays on Canvas
 replace inspector-frame contents for committed selection
 set status-bar text and presentation

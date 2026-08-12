@@ -30,7 +30,9 @@ that root, such as `.6` or `.6.0`.
 - `discrete-engine.md` — owns committed editor workspace state and reduction.
 - `world-model.md` — owns the durable Vector Loom library.
 - `history-manager.md` — owns checkpoint lineage.
-- `projection.md` — owns the visible panes and Canvas overlays.
+- `projection.md` — owns overall visible-editor projection coordination.
+- `projection-tkinter.md` — owns projected Treeviews, inspector, and status.
+- `projection-canvas.md` — owns Canvas projection and editor-only overlays.
 
 ## See Also
 
